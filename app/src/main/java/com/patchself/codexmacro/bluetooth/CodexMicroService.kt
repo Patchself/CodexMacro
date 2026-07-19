@@ -115,6 +115,15 @@ class CodexMicroService : Service() {
     private val advertiseCallback = object : AdvertiseCallback() {
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
             advertising = true
+            if (connectedDevice != null) {
+                stopAdvertising()
+                setPhase(
+                    ControllerPhase.CONNECTED,
+                    hostName = connectedDevice?.name ?: "macOS host",
+                    message = "Codex Micro is connected",
+                )
+                return
+            }
             setPhase(ControllerPhase.ADVERTISING, message = "Pair from macOS Bluetooth settings")
         }
 
@@ -461,14 +470,22 @@ class CodexMicroService : Service() {
     private fun addNextService() {
         val service = pendingServices.pollFirst()
         if (service == null) {
-            startAdvertising()
+            if (connectedDevice != null) {
+                setPhase(
+                    ControllerPhase.CONNECTED,
+                    hostName = connectedDevice?.name ?: "macOS host",
+                    message = "Codex Micro is connected",
+                )
+            } else {
+                startAdvertising()
+            }
             return
         }
         if (gattServer?.addService(service) != true) fail("Unable to add GATT service ${service.uuid}")
     }
 
     private fun startAdvertising() {
-        if (advertising) return
+        if (advertising || connectedDevice != null) return
         val bluetoothAdapter = adapter ?: return fail("Bluetooth adapter is unavailable")
         val advertiser = bluetoothAdapter.bluetoothLeAdvertiser
             ?: return fail("BLE advertiser is unavailable")

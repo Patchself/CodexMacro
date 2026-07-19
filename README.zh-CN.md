@@ -6,6 +6,10 @@ Codex Macro 是一个实验性的 Android BLE 控制器，可配合 macOS 版 Ch
 
 本项目为非官方项目，与 OpenAI、Work Louder、Google 或 Apple 无隶属或背书关系。兼容协议没有公开文档，ChatGPT Desktop 更新后可能失效。
 
+## 截图
+
+![Codex Macro 已连接到 ChatGPT Desktop](docs/assets/codex-macro-connected.png)
+
 ## 环境要求
 
 - Android 9 或更高版本
