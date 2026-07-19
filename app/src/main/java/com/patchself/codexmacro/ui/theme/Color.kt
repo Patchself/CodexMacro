@@ -2,10 +2,11 @@ package com.patchself.codexmacro.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
-
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val Ink = Color(0xFF101318)
+val Panel = Color(0xFF181C23)
+val PanelRaised = Color(0xFF222833)
+val ElectricBlue = Color(0xFF83B9FF)
+val ElectricBlueDark = Color(0xFF1B5D9D)
+val Mint = Color(0xFF72D6AA)
+val Amber = Color(0xFFFFB454)
+val SoftWhite = Color(0xFFE7EAF0)

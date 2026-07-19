@@ -1,3 +1,7 @@
 <resources>
-    <string name="app_name">CodexMacro</string>
+    <string name="app_name">Codex Macro</string>
+    <string name="notification_channel_name">Codex Micro controller</string>
+    <string name="notification_running">Codex Micro controller is running</string>
+    <string name="notification_stop">Stop</string>
+    <string name="notification_start">Start</string>
 </resources>
