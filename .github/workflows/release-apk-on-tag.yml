@@ -28,9 +28,6 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android platform
-        run: sdkmanager --channel=3 --install "platforms;android-37" "platform-tools"
-
       - name: Grant Gradle wrapper permission
         run: chmod +x ./gradlew
 
@@ -44,7 +41,7 @@ jobs:
           echo ${{ secrets.STOREFILEBASE64 }} | base64 --decode > $GITHUB_WORKSPACE/app/key.jks
 
       - name: Build release APK
-        run: ./gradlew :app:assembleRelease
+        run: ./gradlew -Pandroid.builder.sdkDownload=true :app:assembleRelease
 
       - name: Prepare release asset
         run: |
