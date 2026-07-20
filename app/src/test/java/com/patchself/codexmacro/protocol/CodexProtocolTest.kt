@@ -3,6 +3,8 @@ package com.patchself.codexmacro.protocol
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonPrimitive
 
 class CodexProtocolTest {
     @Test
@@ -17,8 +19,8 @@ class CodexProtocolTest {
         }
         val complete = decoder.consume(reports.last()) as DecodeResult.Complete
 
-        assertEquals("device.status", complete.json.getString("method"))
-        assertEquals(7, complete.json.getInt("id"))
+        assertEquals("device.status", complete.json["method"]?.jsonPrimitive?.content)
+        assertEquals(7, complete.json["id"]?.jsonPrimitive?.int)
     }
 
     @Test
@@ -28,7 +30,7 @@ class CodexProtocolTest {
 
         val result = CodexFrameDecoder().consume(report) as DecodeResult.Complete
 
-        assertEquals("sys.version", result.json.getString("method"))
+        assertEquals("sys.version", result.json["method"]?.jsonPrimitive?.content)
     }
 
     @Test
@@ -52,7 +54,7 @@ class CodexProtocolTest {
         assertEquals(DecodeResult.Incomplete, decoder.consume(partial))
         val complete = decoder.consume(replacement) as DecodeResult.Complete
 
-        assertEquals("sys.version", complete.json.getString("method"))
+        assertEquals("sys.version", complete.json["method"]?.jsonPrimitive?.content)
     }
 
     private fun rawReport(payload: String): ByteArray {

@@ -1,7 +1,16 @@
 package com.patchself.codexmacro.protocol
 
-import org.json.JSONArray
-import org.json.JSONObject
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.floatOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
 
 class CodexRpcEngine(
     private val statusProvider: () -> DeviceStatus,
@@ -12,29 +21,30 @@ class CodexRpcEngine(
     private val onThreadLights: (List<Pair<Int, ThreadLight>>) -> Unit,
     private val onLightingConfig: (LightingSide?, LightingSide?) -> Unit,
 ) {
-    fun handle(request: JSONObject): String? {
-        val method = request.optString("method")
-        val id = request.opt("id")
+    fun handle(request: JsonObject): String? {
+        val method = (request["method"] as? JsonPrimitive)?.contentOrNull
+        val id = request["id"] ?: JsonNull
         return when (method) {
-            "sys.version" -> response(id, JSONObject().put("version", firmwareVersion))
+            "sys.version" -> response(id, buildJsonObject { put("version", firmwareVersion) })
             "device.status" -> {
                 val status = statusProvider()
                 response(
                     id,
-                    JSONObject()
-                        .put("version", firmwareVersion)
-                        .put("profile_index", 0)
-                        .put("layer_index", layerProvider().coerceIn(1, 6))
-                        .put("battery", status.battery)
-                        .put("is_charging", status.isCharging),
+                    buildJsonObject {
+                        put("version", firmwareVersion)
+                        put("profile_index", 0)
+                        put("layer_index", layerProvider().coerceIn(1, 6))
+                        put("battery", status.battery)
+                        put("is_charging", status.isCharging)
+                    },
                 )
             }
             "v.oai.thstatus" -> {
-                parseThreadLights(request.optJSONArray("params"))
+                parseThreadLights(request["params"] as? JsonArray)
                 success(id)
             }
             "v.oai.rgbcfg" -> {
-                parseLightingConfig(request.optJSONObject("params"))
+                parseLightingConfig(request["params"] as? JsonObject)
                 success(id)
             }
             "lights.preview", "host.focused_app" -> success(id)
@@ -42,20 +52,20 @@ class CodexRpcEngine(
         }
     }
 
-    private fun parseThreadLights(values: JSONArray?) {
+    private fun parseThreadLights(values: JsonArray?) {
         if (values == null) return
         val updates = buildList {
-            repeat(values.length()) { index ->
-                val value = values.optJSONObject(index) ?: return@repeat
-                val id = value.optInt("id", -1)
-                if (id !in 0..5) return@repeat
+            values.forEach { element ->
+                val value = element as? JsonObject ?: return@forEach
+                val id = (value["id"] as? JsonPrimitive)?.intOrNull ?: return@forEach
+                if (id !in 0..5) return@forEach
                 val current = threadLightProvider(id)
                 add(
                     id to ThreadLight(
-                        color = if (value.has("c")) value.optLong("c") else current.color,
-                        brightness = if (value.has("b")) value.optDouble("b").toFloat() else current.brightness,
-                        effect = if (value.has("e")) value.optString("e") else current.effect,
-                        speed = if (value.has("s")) value.optDouble("s").toFloat() else current.speed,
+                        color = value.longOr("c", current.color),
+                        brightness = value.floatOr("b", current.brightness),
+                        effect = value.stringOr("e", current.effect),
+                        speed = value.floatOr("s", current.speed),
                     ),
                 )
             }
@@ -63,32 +73,44 @@ class CodexRpcEngine(
         onThreadLights(updates)
     }
 
-    private fun parseLightingConfig(config: JSONObject?) {
+    private fun parseLightingConfig(config: JsonObject?) {
         if (config == null) return
         onLightingConfig(
-            config.optJSONObject("ambient")?.toLightingSide(ambientProvider()),
-            config.optJSONObject("keys")?.toLightingSide(keysProvider()),
+            (config["ambient"] as? JsonObject)?.toLightingSide(ambientProvider()),
+            (config["keys"] as? JsonObject)?.toLightingSide(keysProvider()),
         )
     }
 
-    private fun JSONObject.toLightingSide(current: LightingSide) = LightingSide(
-        color = if (has("c")) optLong("c") else current.color,
-        brightness = if (has("b")) optDouble("b").toFloat() else current.brightness,
-        effect = if (has("e")) optString("e") else current.effect,
-        speed = if (has("s")) optDouble("s").toFloat() else current.speed,
+    private fun JsonObject.toLightingSide(current: LightingSide) = LightingSide(
+        color = longOr("c", current.color),
+        brightness = floatOr("b", current.brightness),
+        effect = stringOr("e", current.effect),
+        speed = floatOr("s", current.speed),
     )
 
-    private fun success(id: Any?) = response(id, JSONObject().put("ok", true))
+    private fun JsonObject.longOr(key: String, fallback: Long): Long =
+        (this[key] as? JsonPrimitive)?.longOrNull ?: fallback
 
-    private fun response(id: Any?, result: JSONObject): String = JSONObject()
-        .put("id", id ?: JSONObject.NULL)
-        .put("result", result)
-        .toString()
+    private fun JsonObject.floatOr(key: String, fallback: Float): Float =
+        (this[key] as? JsonPrimitive)?.floatOrNull ?: fallback
 
-    private fun error(id: Any?, code: Int, message: String): String = JSONObject()
-        .put("id", id ?: JSONObject.NULL)
-        .put("error", JSONObject().put("code", code).put("message", message))
-        .toString()
+    private fun JsonObject.stringOr(key: String, fallback: String): String =
+        (this[key] as? JsonPrimitive)?.contentOrNull ?: fallback
+
+    private fun success(id: JsonElement) = response(id, buildJsonObject { put("ok", true) })
+
+    private fun response(id: JsonElement, result: JsonObject): String = buildJsonObject {
+        put("id", id)
+        put("result", result)
+    }.toString()
+
+    private fun error(id: JsonElement, code: Int, message: String): String = buildJsonObject {
+        put("id", id)
+        put("error", buildJsonObject {
+            put("code", code)
+            put("message", message)
+        })
+    }.toString()
 
     companion object {
         const val firmwareVersion = "0.1.0-android"

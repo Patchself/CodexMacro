@@ -50,7 +50,8 @@ import com.patchself.codexmacro.protocol.ThreadLight
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import org.json.JSONObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.io.ByteArrayOutputStream
 import java.util.ArrayDeque
 import java.util.UUID
@@ -278,15 +279,27 @@ class CodexMicroService : Service() {
 
     fun sendKey(key: String, action: Int, agent: Int? = null) {
         if (!_state.value.isConnected) return
-        val params = JSONObject().put("k", key).put("act", action)
-        if (agent != null) params.put("ag", agent)
-        sendJson(JSONObject().put("method", "v.oai.hid").put("params", params).toString())
+        val request = buildJsonObject {
+            put("method", "v.oai.hid")
+            put("params", buildJsonObject {
+                put("k", key)
+                put("act", action)
+                if (agent != null) put("ag", agent)
+            })
+        }
+        sendJson(request.toString())
     }
 
     fun sendJoystick(angle: Double, distance: Double) {
         if (!_state.value.isConnected) return
-        val params = JSONObject().put("a", angle).put("d", distance)
-        sendJson(JSONObject().put("method", "v.oai.rad").put("params", params).toString())
+        val request = buildJsonObject {
+            put("method", "v.oai.rad")
+            put("params", buildJsonObject {
+                put("a", angle)
+                put("d", distance)
+            })
+        }
+        sendJson(request.toString())
     }
 
     /** updateSettings persists controller options and applies safe connection-mode changes. */

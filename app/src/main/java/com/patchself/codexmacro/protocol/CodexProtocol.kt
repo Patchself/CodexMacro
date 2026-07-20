@@ -1,7 +1,7 @@
 package com.patchself.codexmacro.protocol
 
-import org.json.JSONException
-import org.json.JSONObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import java.io.ByteArrayOutputStream
 
 object CodexProtocol {
@@ -42,7 +42,7 @@ object CodexProtocol {
 
 sealed interface DecodeResult {
     data object Incomplete : DecodeResult
-    data class Complete(val json: JSONObject) : DecodeResult
+    data class Complete(val json: JsonObject) : DecodeResult
     data class Invalid(val reason: String) : DecodeResult
 }
 
@@ -89,10 +89,14 @@ class CodexFrameDecoder {
         if (!candidate.endsWith('}')) return DecodeResult.Incomplete
 
         return try {
-            val json = JSONObject(candidate)
+            val json = Json.parseToJsonElement(candidate) as? JsonObject
+            if (json == null) {
+                reset()
+                return DecodeResult.Invalid("JSON payload is not an object")
+            }
             reset()
             DecodeResult.Complete(json)
-        } catch (_: JSONException) {
+        } catch (_: IllegalArgumentException) {
             reset()
             DecodeResult.Invalid("malformed JSON")
         }

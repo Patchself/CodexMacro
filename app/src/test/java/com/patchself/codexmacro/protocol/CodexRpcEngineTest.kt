@@ -1,6 +1,9 @@
 package com.patchself.codexmacro.protocol
 
-import org.json.JSONObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -25,16 +28,16 @@ class CodexRpcEngineTest {
 
     @Test
     fun deviceStatusReturnsBatteryAndChargingState() {
-        val response = JSONObject(
-            requireNotNull(engine.handle(JSONObject("""{"method":"device.status","id":9}"""))),
+        val response = parseObject(
+            requireNotNull(engine.handle(parseObject("""{"method":"device.status","id":9}"""))),
         )
-        val result = response.getJSONObject("result")
+        val result = response.getValue("result").jsonObject
 
-        assertEquals(9, response.getInt("id"))
-        assertEquals(73, result.getInt("battery"))
-        assertTrue(result.getBoolean("is_charging"))
-        assertEquals(4, result.getInt("layer_index"))
-        assertEquals(CodexRpcEngine.firmwareVersion, result.getString("version"))
+        assertEquals(9, response.getValue("id").jsonPrimitive.int)
+        assertEquals(73, result.getValue("battery").jsonPrimitive.int)
+        assertTrue(result.getValue("is_charging").jsonPrimitive.content.toBoolean())
+        assertEquals(4, result.getValue("layer_index").jsonPrimitive.int)
+        assertEquals(CodexRpcEngine.firmwareVersion, result.getValue("version").jsonPrimitive.content)
     }
 
     @Test
@@ -42,7 +45,7 @@ class CodexRpcEngineTest {
         threads[2] = ThreadLight(color = 0x112233, brightness = 0.4f, effect = "off", speed = 2f)
 
         engine.handle(
-            JSONObject("""{"method":"v.oai.thstatus","params":[{"id":2,"b":0.9,"e":"breath"}],"id":3}"""),
+            parseObject("""{"method":"v.oai.thstatus","params":[{"id":2,"b":0.9,"e":"breath"}],"id":3}"""),
         )
 
         assertEquals(0x112233, threads[2].color)
@@ -53,11 +56,13 @@ class CodexRpcEngineTest {
 
     @Test
     fun unknownMethodReturnsJsonRpcError() {
-        val response = JSONObject(
-            requireNotNull(engine.handle(JSONObject("""{"method":"unknown.method","id":"rpc-1"}"""))),
+        val response = parseObject(
+            requireNotNull(engine.handle(parseObject("""{"method":"unknown.method","id":"rpc-1"}"""))),
         )
 
-        assertEquals("rpc-1", response.getString("id"))
-        assertEquals(-32601, response.getJSONObject("error").getInt("code"))
+        assertEquals("rpc-1", response.getValue("id").jsonPrimitive.content)
+        assertEquals(-32601, response.getValue("error").jsonObject.getValue("code").jsonPrimitive.int)
     }
+
+    private fun parseObject(value: String) = Json.parseToJsonElement(value).jsonObject
 }
