@@ -8,16 +8,22 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
@@ -50,12 +56,15 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.sp
 import androidx.annotation.DrawableRes
+import com.patchself.codexmacro.R
+import com.patchself.codexmacro.bluetooth.CommandKeycap
 import com.patchself.codexmacro.protocol.ThreadLight
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -95,22 +104,33 @@ fun AgentKey(
 
 @Composable
 fun CommandKey(
-    @DrawableRes iconRes: Int,
-    description: String,
+    keycap: CommandKeycap,
     id: String,
     enabled: Boolean,
     modifier: Modifier,
     onKey: (String, Int, Int?) -> Unit,
 ) {
     HardwareKey(
-        iconRes = iconRes,
-        description = description,
+        symbol = if (keycap.iconRes() == null) keycap.glyph else null,
+        iconRes = keycap.iconRes(),
+        description = keycap.label,
         enabled = enabled,
         glow = Color(0x553ECFA4),
         modifier = modifier,
         onPress = { onKey(id, 1, null) },
         onRelease = { onKey(id, 0, null) },
     )
+}
+
+@DrawableRes
+private fun CommandKeycap.iconRes(): Int? = when (this) {
+    CommandKeycap.Fast -> R.drawable.ic_key_fast
+    CommandKeycap.Approve -> R.drawable.ic_key_approve
+    CommandKeycap.Decline -> R.drawable.ic_key_decline
+    CommandKeycap.Fork -> R.drawable.ic_key_fork
+    CommandKeycap.Mic -> R.drawable.ic_key_mic
+    CommandKeycap.Codex -> R.drawable.ic_key_codex
+    else -> null
 }
 
 @Composable
@@ -166,7 +186,11 @@ private fun HardwareKey(
                         modifier = Modifier.size(if (description == "Mic") 28.dp else 25.dp),
                     )
                 } else {
-                    Text(symbol.orEmpty(), fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = symbol.orEmpty(),
+                        fontSize = if (symbol.orEmpty().length > 3) 11.sp else 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
                 Text(description, fontSize = 8.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
             }
@@ -316,12 +340,67 @@ fun JoystickControl(
     }
 }
 
+/** LayerControl cycles through six layers and renders the physical three-light code. */
 @Composable
-fun LayerControl(modifier: Modifier) {
-    Box(modifier = modifier.semantics { contentDescription = "Layer" }, contentAlignment = Alignment.Center) {
-        Box(Modifier.fillMaxSize(0.54f).shadow(5.dp, CircleShape).background(Color(0xFF11110F), CircleShape))
-        Box(Modifier.size(4.dp).background(Color(0xFF76E6BA), CircleShape).align(Alignment.CenterStart))
+fun LayerControl(
+    activeLayer: Int,
+    onCycleLayer: () -> Unit,
+    modifier: Modifier,
+) {
+    val layer = activeLayer.coerceIn(0, 5)
+    val indicators = layerIndicatorStates(layer)
+    val haptics = LocalHapticFeedback.current
+    Box(
+        modifier = modifier
+            .semantics {
+                contentDescription = "Layer ${layer + 1}"
+                stateDescription = "Layer ${layer + 1} of 6"
+            }
+            .clickable(role = Role.Button) {
+                haptics.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+                onCycleLayer()
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(0.72f),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                indicators.forEach { lit ->
+                    Box(
+                        Modifier
+                            .width(10.dp)
+                            .height(4.dp)
+                            .background(
+                                if (lit) Color(0xFF76E6BA) else Color(0xFFAAA9A3),
+                                RoundedCornerShape(2.dp),
+                            ),
+                    )
+                }
+            }
+            Box(
+                Modifier
+                    .weight(1f)
+                    .aspectRatio(1f)
+                    .shadow(5.dp, CircleShape)
+                    .background(Color(0xFF11110F), CircleShape),
+            )
+        }
     }
+}
+
+internal fun layerIndicatorStates(layer: Int): List<Boolean> = when (layer.coerceIn(0, 5)) {
+    0 -> listOf(true, false, false)
+    1 -> listOf(false, true, false)
+    2 -> listOf(false, false, true)
+    3 -> listOf(true, true, false)
+    4 -> listOf(false, true, true)
+    else -> listOf(true, true, true)
 }
 
 internal fun rgbColor(value: Long): Color = Color((0xFF000000L or (value and 0xFFFFFF)).toInt())

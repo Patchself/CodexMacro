@@ -41,6 +41,14 @@ By default, the app temporarily changes the Android Bluetooth name to `Codex Mic
 - **Command Keys:** Fast, Approve, Decline, Fork, Mic, and Codex Send.
 - **Analog stick:** Four digital directions selected by dragging from the center.
 - **Dial:** Press and hold the center, or drag around the outer ring for continuous rotation steps.
+- **Layer:** Tap the bottom-left touch control to cycle through six layers; the three adjacent indicators show the active layer.
+
+Open **Settings > Keycap layout** to choose any of the 32 Codex Icon Keyset legends for the six
+Command Keys. Each layer persists an independent virtual-keycap layout, and the active layer is restored
+after restart. Each position still reports its fixed `ACT06`, `ACT07`, `ACT08`, `ACT09`, `ACT10`, or
+`ACT12` ID, while device status reports the active `layer_index`; the host owns action mapping. This
+mirrors the physical device: swappable keycaps are visual legends and do not change a switch's electrical
+identity or host mapping.
 
 The phone does not send text as a conventional Bluetooth keyboard. Command remapping and press-duration behavior are handled by ChatGPT Desktop.
 

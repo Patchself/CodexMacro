@@ -5,6 +5,7 @@ import org.json.JSONObject
 
 class CodexRpcEngine(
     private val statusProvider: () -> DeviceStatus,
+    private val layerProvider: () -> Int,
     private val threadLightProvider: (Int) -> ThreadLight,
     private val ambientProvider: () -> LightingSide,
     private val keysProvider: () -> LightingSide,
@@ -23,7 +24,7 @@ class CodexRpcEngine(
                     JSONObject()
                         .put("version", firmwareVersion)
                         .put("profile_index", 0)
-                        .put("layer_index", 1)
+                        .put("layer_index", layerProvider().coerceIn(1, 6))
                         .put("battery", status.battery)
                         .put("is_charging", status.isCharging),
                 )

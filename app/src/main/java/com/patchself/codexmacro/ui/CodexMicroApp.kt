@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patchself.codexmacro.protocol.ControllerPhase
 import com.patchself.codexmacro.protocol.ControllerState
+import com.patchself.codexmacro.bluetooth.CommandKeycap
 import com.patchself.codexmacro.bluetooth.ControllerSettings
 import com.patchself.codexmacro.ui.components.AgentKey
 import com.patchself.codexmacro.ui.components.CommandKey
@@ -48,7 +50,6 @@ import com.patchself.codexmacro.ui.components.ControllerSettingsDialog
 import com.patchself.codexmacro.ui.components.DialControl
 import com.patchself.codexmacro.ui.components.JoystickControl
 import com.patchself.codexmacro.ui.components.LayerControl
-import com.patchself.codexmacro.R
 
 private val appBackground = Brush.verticalGradient(
     listOf(Color(0xFFF4F1EB), Color(0xFFE1DDD4)),
@@ -64,9 +65,10 @@ fun CodexMicroApp(
     onOpenBluetoothSettings: () -> Unit,
     onKey: (String, Int, Int?) -> Unit,
     onJoystick: (Double, Double) -> Unit,
+    onCycleLayer: () -> Unit,
 ) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(appBackground)
@@ -74,43 +76,31 @@ fun CodexMicroApp(
             .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            ControllerStatus(
+        val isLandscape = maxWidth > maxHeight
+        if (isLandscape) {
+            LandscapeController(
                 state = state,
+                settings = settings,
                 onStart = onStart,
                 onStop = onStop,
                 onOpenBluetoothSettings = onOpenBluetoothSettings,
                 onOpenSettings = { showSettings = true },
+                onKey = onKey,
+                onJoystick = onJoystick,
+                onCycleLayer = onCycleLayer,
             )
-            Spacer(Modifier.weight(1f))
-            BoxWithConstraints(
-                modifier = Modifier.fillMaxWidth().weight(12f),
-                contentAlignment = Alignment.Center,
-            ) {
-                val boardWidth = minOf(maxWidth, maxHeight * 0.94f, 560.dp)
-                MicroBoard(
-                    state = state,
-                    onKey = onKey,
-                    onJoystick = onJoystick,
-                    modifier = Modifier.width(boardWidth).heightIn(max = 596.dp).aspectRatio(0.94f),
-                )
-            }
-            state.message?.let { message ->
-                Text(
-                    text = message,
-                    color = if (state.phase == ControllerPhase.ERROR) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        Color(0xFF5E5A53)
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(top = 6.dp),
-                    maxLines = 1,
-                )
-            }
+        } else {
+            PortraitController(
+                state = state,
+                settings = settings,
+                onStart = onStart,
+                onStop = onStop,
+                onOpenBluetoothSettings = onOpenBluetoothSettings,
+                onOpenSettings = { showSettings = true },
+                onKey = onKey,
+                onJoystick = onJoystick,
+                onCycleLayer = onCycleLayer,
+            )
         }
         if (showSettings) {
             ControllerSettingsDialog(
@@ -123,12 +113,130 @@ fun CodexMicroApp(
 }
 
 @Composable
-private fun MicroBoard(
+private fun PortraitController(
     state: ControllerState,
+    settings: ControllerSettings,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+    onOpenBluetoothSettings: () -> Unit,
+    onOpenSettings: () -> Unit,
     onKey: (String, Int, Int?) -> Unit,
     onJoystick: (Double, Double) -> Unit,
+    onCycleLayer: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        ControllerStatus(
+            state = state,
+            onStart = onStart,
+            onStop = onStop,
+            onOpenBluetoothSettings = onOpenBluetoothSettings,
+            onOpenSettings = onOpenSettings,
+        )
+        Spacer(Modifier.weight(1f))
+        ControllerBoard(
+            state = state,
+            settings = settings,
+            onKey = onKey,
+            onJoystick = onJoystick,
+            onCycleLayer = onCycleLayer,
+            modifier = Modifier.fillMaxWidth().weight(12f),
+        )
+        ControllerMessage(state)
+    }
+}
+
+@Composable
+private fun LandscapeController(
+    state: ControllerState,
+    settings: ControllerSettings,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+    onOpenBluetoothSettings: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onKey: (String, Int, Int?) -> Unit,
+    onJoystick: (Double, Double) -> Unit,
+    onCycleLayer: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.width(190.dp).fillMaxHeight()) {
+            ControllerStatus(
+                state = state,
+                onStart = onStart,
+                onStop = onStop,
+                onOpenBluetoothSettings = onOpenBluetoothSettings,
+                onOpenSettings = onOpenSettings,
+                vertical = true,
+            )
+            Spacer(Modifier.weight(1f))
+            ControllerMessage(state)
+        }
+        ControllerBoard(
+            state = state,
+            settings = settings,
+            onKey = onKey,
+            onJoystick = onJoystick,
+            onCycleLayer = onCycleLayer,
+            modifier = Modifier.fillMaxHeight().weight(1f).padding(start = 12.dp),
+        )
+    }
+}
+
+@Composable
+private fun ControllerBoard(
+    state: ControllerState,
+    settings: ControllerSettings,
+    onKey: (String, Int, Int?) -> Unit,
+    onJoystick: (Double, Double) -> Unit,
+    onCycleLayer: () -> Unit,
+    modifier: Modifier,
+) {
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
+        val boardWidth = minOf(maxWidth, maxHeight * 0.94f, 560.dp)
+        MicroBoard(
+            state = state,
+            settings = settings,
+            onKey = onKey,
+            onJoystick = onJoystick,
+            onCycleLayer = onCycleLayer,
+            modifier = Modifier.width(boardWidth).heightIn(max = 596.dp).aspectRatio(0.94f),
+        )
+    }
+}
+
+@Composable
+private fun ControllerMessage(state: ControllerState) {
+    state.message?.let { message ->
+        Text(
+            text = message,
+            color = if (state.phase == ControllerPhase.ERROR) {
+                MaterialTheme.colorScheme.error
+            } else {
+                Color(0xFF5E5A53)
+            },
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(top = 6.dp),
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun MicroBoard(
+    state: ControllerState,
+    settings: ControllerSettings,
+    onKey: (String, Int, Int?) -> Unit,
+    onJoystick: (Double, Double) -> Unit,
+    onCycleLayer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val activeLayer = settings.activeLayer.coerceIn(0, CommandKeycap.layerCount - 1)
+    val commandKeycaps = CommandKeycap.normalizeLayers(settings.layerKeycaps)[activeLayer]
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(32.dp),
@@ -159,15 +267,15 @@ private fun MicroBoard(
                     }
                 }
                 Row(Modifier.weight(1f), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-                    CommandKey(R.drawable.ic_key_fast, "Fast", "ACT06", state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
-                    CommandKey(R.drawable.ic_key_approve, "Approve", "ACT07", state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
-                    CommandKey(R.drawable.ic_key_decline, "Decline", "ACT08", state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
-                    CommandKey(R.drawable.ic_key_fork, "Fork", "ACT09", state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
+                    CommandKey(commandKeycaps[0], "ACT06", state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
+                    CommandKey(commandKeycaps[1], "ACT07", state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
+                    CommandKey(commandKeycaps[2], "ACT08", state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
+                    CommandKey(commandKeycaps[3], "ACT09", state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
                 }
                 Row(Modifier.weight(1f), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-                    LayerControl(Modifier.weight(1f).fillMaxSize())
-                    CommandKey(R.drawable.ic_key_mic, "Mic", "ACT10", state.isConnected, Modifier.weight(2f).fillMaxSize(), onKey)
-                    CommandKey(R.drawable.ic_key_codex, "Codex", "ACT12", state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
+                    LayerControl(activeLayer, onCycleLayer, Modifier.weight(1f).fillMaxSize())
+                    CommandKey(commandKeycaps[4], "ACT10", state.isConnected, Modifier.weight(2f).fillMaxSize(), onKey)
+                    CommandKey(commandKeycaps[5], "ACT12", state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
                 }
                     }
                 }

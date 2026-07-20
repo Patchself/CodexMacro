@@ -12,6 +12,7 @@ class CodexRpcEngineTest {
 
     private val engine = CodexRpcEngine(
         statusProvider = { DeviceStatus(73, true) },
+        layerProvider = { 4 },
         threadLightProvider = { threads[it] },
         ambientProvider = { ambient },
         keysProvider = { keys },
@@ -32,6 +33,7 @@ class CodexRpcEngineTest {
         assertEquals(9, response.getInt("id"))
         assertEquals(73, result.getInt("battery"))
         assertTrue(result.getBoolean("is_charging"))
+        assertEquals(4, result.getInt("layer_index"))
         assertEquals(CodexRpcEngine.firmwareVersion, result.getString("version"))
     }
 

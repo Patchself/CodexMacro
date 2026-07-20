@@ -41,6 +41,13 @@ APK 输出路径为 `app/build/outputs/apk/debug/app-debug.apk`。
 - **Command Keys：** Fast、Approve、Decline、Fork、Mic 和 Codex Send。
 - **摇杆：** 从中心向四个方向拖动，触发对应的数字方向。
 - **旋钮：** 按住中心可触发按下/松开；沿外圈拖动可连续触发顺时针或逆时针刻度。
+- **Layer：** 点击左下角触摸区循环切换 6 层；旁边三颗指示灯显示当前层。
+
+在 **Settings > Keycap layout** 中，可以为 6 个 Command Key 选择 Codex Icon Keyset
+中的 32 种键帽图例。每层独立保存一套虚拟键帽布局，当前层也会在重启后恢复。按键仍按
+位置发送固定的 `ACT06`、`ACT07`、`ACT08`、`ACT09`、`ACT10` 和 `ACT12`，设备状态会报告
+当前 `layer_index`，具体动作由主机映射。这与实体设备相同：可替换键帽只是图例，不会自动
+改变按键电气标识或主机映射。
 
 本应用不会像普通蓝牙键盘一样输入文字。按键映射和长按行为由 ChatGPT Desktop 处理。
 

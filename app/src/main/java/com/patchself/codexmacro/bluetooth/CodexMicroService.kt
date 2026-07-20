@@ -90,6 +90,7 @@ class CodexMicroService : Service() {
     private val rpcEngine by lazy {
         CodexRpcEngine(
             statusProvider = { DeviceStatus(_state.value.battery, _state.value.isCharging) },
+            layerProvider = { _settings.value.activeLayer + 1 },
             threadLightProvider = { _state.value.threads[it] },
             ambientProvider = { _state.value.ambient },
             keysProvider = { _state.value.keys },
@@ -287,15 +288,22 @@ class CodexMicroService : Service() {
         sendJson(JSONObject().put("method", "v.oai.rad").put("params", params).toString())
     }
 
-    /** updateSettings persists controller compatibility options and applies safe idle changes. */
+    /** updateSettings persists controller options and applies safe connection-mode changes. */
     fun updateSettings(settings: ControllerSettings) {
         val previous = _settings.value
-        _settings.value = settings
+        val normalizedSettings = settings.copy(
+            activeLayer = settings.activeLayer.coerceIn(0, CommandKeycap.layerCount - 1),
+            layerKeycaps = CommandKeycap.normalizeLayers(settings.layerKeycaps),
+        )
+        _settings.value = normalizedSettings
         preferences.edit {
-            putBoolean(stableConnectionKey, settings.stableConnection)
-            putBoolean(autoResumeKey, settings.autoResume)
+            putBoolean(stableConnectionKey, normalizedSettings.stableConnection)
+            putBoolean(autoResumeKey, normalizedSettings.autoResume)
+            putInt(activeLayerKey, normalizedSettings.activeLayer)
+            putString(layerKeycapsKey, CommandKeycap.encodeLayers(normalizedSettings.layerKeycaps))
+            remove(commandKeycapsKey)
         }
-        if (previous.stableConnection && !settings.stableConnection && !controllerStarted) {
+        if (previous.stableConnection && !normalizedSettings.stableConnection && !controllerStarted) {
             stopTransport()
             restoreBluetoothName()
             if (foregroundActive) {
@@ -304,6 +312,12 @@ class CodexMicroService : Service() {
             }
             stopSelf()
         }
+    }
+
+    /** cycleLayer advances to the next persisted controller layer. */
+    fun cycleLayer() {
+        val nextLayer = (_settings.value.activeLayer + 1) % CommandKeycap.layerCount
+        updateSettings(_settings.value.copy(activeLayer = nextLayer))
     }
 
     fun stopController() {
@@ -711,10 +725,22 @@ class CodexMicroService : Service() {
         return bluetoothAdapter.setName(deviceName)
     }
 
-    private fun loadSettings() = ControllerSettings(
-        stableConnection = preferences.getBoolean(stableConnectionKey, false),
-        autoResume = preferences.getBoolean(autoResumeKey, false),
-    )
+    private fun loadSettings(): ControllerSettings {
+        val storedLayers = preferences.getString(layerKeycapsKey, null)
+        val layers = if (storedLayers != null) {
+            CommandKeycap.decodeLayers(storedLayers)
+        } else {
+            CommandKeycap.defaultLayers.toMutableList().apply {
+                this[0] = CommandKeycap.decodeLayout(preferences.getString(commandKeycapsKey, null))
+            }
+        }
+        return ControllerSettings(
+            stableConnection = preferences.getBoolean(stableConnectionKey, false),
+            autoResume = preferences.getBoolean(autoResumeKey, false),
+            activeLayer = preferences.getInt(activeLayerKey, 0).coerceIn(0, CommandKeycap.layerCount - 1),
+            layerKeycaps = layers,
+        )
+    }
 
     private fun recoverBluetoothName(): Boolean {
         if (!hasBluetoothPermissions()) return false
@@ -809,6 +835,9 @@ class CodexMicroService : Service() {
         private const val renameActiveKey = "rename_active"
         private const val stableConnectionKey = "stable_connection"
         private const val autoResumeKey = "auto_resume"
+        private const val commandKeycapsKey = "command_keycaps"
+        private const val activeLayerKey = "active_layer"
+        private const val layerKeycapsKey = "layer_keycaps"
         private const val controllerRunningKey = "controller_running"
         private const val reportDelayMs = 4L
         private const val nameChangeDelayMs = 500L

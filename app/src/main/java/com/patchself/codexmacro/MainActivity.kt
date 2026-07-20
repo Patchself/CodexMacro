@@ -92,6 +92,7 @@ class MainActivity : ComponentActivity() {
                     },
                     onKey = { key, action, agent -> service?.sendKey(key, action, agent) },
                     onJoystick = { angle, distance -> service?.sendJoystick(angle, distance) },
+                    onCycleLayer = { service?.cycleLayer() },
                 )
             }
         }
