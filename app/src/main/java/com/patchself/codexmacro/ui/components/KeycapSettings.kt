@@ -117,7 +117,7 @@ private fun KeycapSlot(
         color = Color(0xFFE2E5E1),
     ) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(keycap.glyph, color = Color(0xFF24231F), fontWeight = FontWeight.Black, fontSize = 13.sp)
+            KeycapArtwork(keycap, Modifier.size(18.dp))
             Text(
                 text = "${slot + 1} · ${keycap.label}",
                 modifier = Modifier.padding(start = 8.dp),
@@ -170,7 +170,7 @@ internal fun KeycapPicker(
                 ) {
                     Box(Modifier.fillMaxSize().padding(6.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(keycap.glyph, color = Color(0xFF24231F), fontWeight = FontWeight.Black, fontSize = 15.sp)
+                            KeycapArtwork(keycap, Modifier.size(22.dp))
                             Text(
                                 keycap.label,
                                 color = Color(0xFF555149),

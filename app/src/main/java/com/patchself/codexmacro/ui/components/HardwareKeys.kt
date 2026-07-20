@@ -103,14 +103,62 @@ fun CommandKey(
 }
 
 @DrawableRes
-private fun CommandKeycap.iconRes(): Int? = when (this) {
+internal fun CommandKeycap.iconRes(): Int? = when (this) {
+    CommandKeycap.Bug -> R.drawable.ic_key_bug
+    CommandKeycap.Codex -> R.drawable.ic_key_codex
+    CommandKeycap.Terminal -> R.drawable.ic_key_terminal
+    CommandKeycap.Download -> R.drawable.ic_key_download
+    CommandKeycap.Trash -> R.drawable.ic_key_trash
+    CommandKeycap.Edit -> R.drawable.ic_key_edit
+    CommandKeycap.Send -> R.drawable.ic_key_send
+    CommandKeycap.Spark -> R.drawable.ic_key_spark
+    CommandKeycap.NewChat -> R.drawable.ic_key_new_chat
+    CommandKeycap.Run -> R.drawable.ic_key_run
+    CommandKeycap.Branches -> R.drawable.ic_key_branches
+    CommandKeycap.Fork -> R.drawable.ic_key_fork
+    CommandKeycap.BranchAdd -> R.drawable.ic_key_branch_add
+    CommandKeycap.Merge -> R.drawable.ic_key_merge
+    CommandKeycap.Plug -> R.drawable.ic_key_plug
+    CommandKeycap.Experiment -> R.drawable.ic_key_experiment
+    CommandKeycap.Review -> R.drawable.ic_key_review
+    CommandKeycap.History -> R.drawable.ic_key_history
+    CommandKeycap.Think -> R.drawable.ic_key_think
+    CommandKeycap.Link -> R.drawable.ic_key_link
     CommandKeycap.Fast -> R.drawable.ic_key_fast
     CommandKeycap.Approve -> R.drawable.ic_key_approve
     CommandKeycap.Decline -> R.drawable.ic_key_decline
-    CommandKeycap.Fork -> R.drawable.ic_key_fork
+    CommandKeycap.Redirect -> R.drawable.ic_key_redirect
+    CommandKeycap.Settings -> R.drawable.ic_key_settings
+    CommandKeycap.FolderAdd -> R.drawable.ic_key_folder_add
+    CommandKeycap.Upload -> R.drawable.ic_key_upload
+    CommandKeycap.Apps -> R.drawable.ic_key_apps
     CommandKeycap.Mic -> R.drawable.ic_key_mic
-    CommandKeycap.Codex -> R.drawable.ic_key_codex
-    else -> null
+    CommandKeycap.Assistant -> R.drawable.ic_key_assistant
+    CommandKeycap.Yolo,
+    CommandKeycap.Yeet,
+    -> null
+}
+
+@Composable
+internal fun KeycapArtwork(
+    keycap: CommandKeycap,
+    modifier: Modifier = Modifier,
+) {
+    val iconRes = keycap.iconRes()
+    if (iconRes != null) {
+        Image(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = modifier,
+        )
+    } else {
+        Text(
+            text = keycap.glyph,
+            color = Color(0xFF24231F),
+            fontSize = 9.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
 }
 
 @Composable
