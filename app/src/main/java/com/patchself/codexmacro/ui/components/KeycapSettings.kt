@@ -27,10 +27,12 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patchself.codexmacro.bluetooth.CommandKeycap
 import com.patchself.codexmacro.bluetooth.ControllerSettings
+import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 
 @Composable
 internal fun KeycapLayout(
@@ -184,5 +186,19 @@ internal fun KeycapPicker(
         TextButton(onClick = onBack, modifier = Modifier.align(Alignment.End)) {
             Text("Back", fontWeight = FontWeight.Bold)
         }
+    }
+}
+
+@Preview(name = "Keycap picker", widthDp = 440, heightDp = 620, showBackground = true)
+@Composable
+private fun KeycapPickerPreview() {
+    CodexMacroTheme {
+        KeycapPicker(
+            layer = 0,
+            slot = 1,
+            selected = CommandKeycap.Approve,
+            onSelect = {},
+            onBack = {},
+        )
     }
 }

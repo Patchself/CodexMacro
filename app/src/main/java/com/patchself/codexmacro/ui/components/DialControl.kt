@@ -33,7 +33,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -123,4 +125,16 @@ private fun normalizedAngle(angle: Float): Float = when {
     angle > PI -> (angle - 2 * PI).toFloat()
     angle < -PI -> (angle + 2 * PI).toFloat()
     else -> angle
+}
+
+@Preview(name = "Dial control", widthDp = 112, heightDp = 112, showBackground = true)
+@Composable
+private fun DialControlPreview() {
+    CodexMacroTheme {
+        DialControl(
+            enabled = true,
+            modifier = Modifier.fillMaxSize(),
+            onKey = { _, _, _ -> },
+        )
+    }
 }

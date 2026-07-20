@@ -24,7 +24,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 
 /** LayerControl cycles through six layers and renders the physical three-light code. */
 @Composable
@@ -81,4 +83,16 @@ internal fun layerIndicatorStates(layer: Int): List<Boolean> = when (layer.coerc
     3 -> listOf(true, true, false)
     4 -> listOf(false, true, true)
     else -> listOf(true, true, true)
+}
+
+@Preview(name = "Layer control", widthDp = 112, heightDp = 112, showBackground = true)
+@Composable
+private fun LayerControlPreview() {
+    CodexMacroTheme {
+        LayerControl(
+            activeLayer = 3,
+            onCycleLayer = {},
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
 }

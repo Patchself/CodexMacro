@@ -21,10 +21,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patchself.codexmacro.protocol.ControllerPhase
 import com.patchself.codexmacro.protocol.ControllerState
+import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 
 @Composable
 fun ControllerStatus(
@@ -175,4 +177,25 @@ private fun phaseLabel(phase: ControllerPhase): String = when (phase) {
     ControllerPhase.CONNECTED -> "CONNECTED"
     ControllerPhase.ERROR -> "ERROR"
     ControllerPhase.UNSUPPORTED -> "UNSUPPORTED"
+}
+
+@Preview(name = "Connected status", widthDp = 520, showBackground = true)
+@Preview(name = "Compact status", widthDp = 360, showBackground = true)
+@Composable
+private fun ControllerStatusPreview() {
+    CodexMacroTheme {
+        ControllerStatus(
+            state = ControllerState(
+                phase = ControllerPhase.CONNECTED,
+                hostName = "MacBook Pro",
+                battery = 78,
+                isCharging = true,
+            ),
+            onStart = {},
+            onStop = {},
+            onOpenBluetoothSettings = {},
+            onOpenSettings = {},
+            modifier = Modifier.padding(12.dp),
+        )
+    }
 }

@@ -25,11 +25,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.patchself.codexmacro.bluetooth.CommandKeycap
 import com.patchself.codexmacro.bluetooth.ControllerSettings
+import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 
 /** ControllerSettingsDialog edits connection behavior and per-layer keycaps. */
 @Composable
@@ -134,6 +136,19 @@ private fun SettingToggle(
             checked = checked,
             onCheckedChange = onCheckedChange,
             modifier = Modifier.padding(start = 16.dp),
+        )
+    }
+}
+
+@Preview(name = "Controller settings", widthDp = 440, heightDp = 720, showBackground = true)
+@Composable
+private fun ControllerSettingsPreview() {
+    CodexMacroTheme {
+        SettingsContent(
+            settings = ControllerSettings(stableConnection = true, activeLayer = 2),
+            onSettingsChange = {},
+            onDismiss = {},
+            onEditSlot = {},
         )
     }
 }

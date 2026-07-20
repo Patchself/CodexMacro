@@ -42,11 +42,13 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patchself.codexmacro.R
 import com.patchself.codexmacro.bluetooth.CommandKeycap
 import com.patchself.codexmacro.protocol.ThreadLight
+import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 
 private val keyShape = RoundedCornerShape(13.dp)
 
@@ -189,3 +191,29 @@ private fun defaultAgentColor(index: Int): Color = listOf(
     Color(0xFFF3A5AA),
     Color(0xFFC7C7ED),
 )[index]
+
+@Preview(name = "Agent key", widthDp = 112, heightDp = 112, showBackground = true)
+@Composable
+private fun AgentKeyPreview() {
+    CodexMacroTheme {
+        AgentKey(
+            index = 0,
+            light = ThreadLight(color = 0x9D9AF4, brightness = 1f),
+            enabled = true,
+            modifier = Modifier.size(96.dp),
+        ) { _, _, _ -> }
+    }
+}
+
+@Preview(name = "Command key", widthDp = 112, heightDp = 112, showBackground = true)
+@Composable
+private fun CommandKeyPreview() {
+    CodexMacroTheme {
+        CommandKey(
+            keycap = CommandKeycap.Approve,
+            id = "ACT07",
+            enabled = true,
+            modifier = Modifier.size(96.dp),
+        ) { _, _, _ -> }
+    }
+}

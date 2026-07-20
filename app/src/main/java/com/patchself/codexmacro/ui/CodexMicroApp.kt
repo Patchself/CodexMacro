@@ -18,9 +18,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import com.patchself.codexmacro.bluetooth.ControllerSettings
 import com.patchself.codexmacro.protocol.ControllerState
 import com.patchself.codexmacro.ui.components.ControllerSettingsDialog
+import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 
 private val appBackground = Brush.verticalGradient(
     listOf(Color(0xFFF4F1EB), Color(0xFFE1DDD4)),
@@ -69,5 +71,24 @@ fun CodexMicroApp(
                 onDismiss = { showSettings = false },
             )
         }
+    }
+}
+
+@Preview(name = "Phone portrait", widthDp = 360, heightDp = 800, showBackground = true)
+@Preview(name = "Phone landscape", widthDp = 800, heightDp = 360, showBackground = true)
+@Composable
+private fun CodexMicroAppPreview() {
+    CodexMacroTheme {
+        CodexMicroApp(
+            state = ControllerState(),
+            settings = ControllerSettings(),
+            onSettingsChange = {},
+            onStart = {},
+            onStop = {},
+            onOpenBluetoothSettings = {},
+            onKey = { _, _, _ -> },
+            onJoystick = { _, _ -> },
+            onCycleLayer = {},
+        )
     }
 }

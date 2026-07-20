@@ -26,8 +26,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.roundToInt
@@ -96,5 +98,17 @@ fun JoystickControl(
                 ),
             )
         }
+    }
+}
+
+@Preview(name = "Joystick control", widthDp = 112, heightDp = 112, showBackground = true)
+@Composable
+private fun JoystickControlPreview() {
+    CodexMacroTheme {
+        JoystickControl(
+            enabled = true,
+            modifier = Modifier.fillMaxSize(),
+            onJoystick = { _, _ -> },
+        )
     }
 }
