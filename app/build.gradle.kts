@@ -1,7 +1,23 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 }
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use(::load)
+    }
+}
+
+val hasReleaseSigning = listOf(
+    "ALIAS_NAME",
+    "ALIAS_PASSWORD",
+    "KEY_PASSWORD",
+    "KEY_PATH",
+).all { !localProperties.getProperty(it).isNullOrBlank() }
 
 android {
     namespace = "com.patchself.codexmacro"
@@ -14,13 +30,27 @@ android {
         minSdk = 28
         targetSdk = 37
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(localProperties.getProperty("KEY_PATH"))
+                storePassword = localProperties.getProperty("KEY_PASSWORD")
+                keyAlias = localProperties.getProperty("ALIAS_NAME")
+                keyPassword = localProperties.getProperty("ALIAS_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             optimization {
                 enable = false
             }
