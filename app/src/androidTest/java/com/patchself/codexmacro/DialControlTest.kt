@@ -40,6 +40,31 @@ class DialControlTest {
     }
 
     @Test
+    fun centerDragPastTouchSlopReleasesPressAndRotates() {
+        val events = mutableListOf<String>()
+        composeRule.setContent {
+            DialControl(
+                enabled = true,
+                modifier = Modifier.size(200.dp),
+                onKey = { key, action, _ -> events += "$key:$action" },
+            )
+        }
+
+        composeRule.onNodeWithContentDescription("Dial").performTouchInput {
+            down(center)
+            moveTo(Offset(width * 0.75f, height / 2f), 50)
+            moveTo(Offset(width / 2f, height * 0.75f), 50)
+            up()
+        }
+
+        composeRule.runOnIdle {
+            assertEquals(listOf("ENC:1", "ENC:0"), events.take(2))
+            assertTrue(events.drop(2).isNotEmpty())
+            assertTrue(events.drop(2).all { it == "ENC_CC:2" })
+        }
+    }
+
+    @Test
     fun clockwiseOuterDragSendsRepeatedCounterClockwiseProtocolSteps() {
         val events = mutableListOf<String>()
         composeRule.setContent {

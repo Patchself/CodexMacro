@@ -15,12 +15,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -32,6 +34,7 @@ import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 @Composable
 fun LayerControl(
     activeLayer: Int,
+    enabled: Boolean,
     onCycleLayer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -40,11 +43,13 @@ fun LayerControl(
     val haptics = LocalHapticFeedback.current
     Box(
         modifier = modifier
+            .alpha(if (enabled) 1f else 0.68f)
             .semantics {
                 contentDescription = "Layer ${layer + 1}"
                 stateDescription = "Layer ${layer + 1} of 6"
+                if (!enabled) disabled()
             }
-            .clickable(role = Role.Button) {
+            .clickable(enabled = enabled, role = Role.Button) {
                 haptics.performHapticFeedback(HapticFeedbackType.KeyboardTap)
                 onCycleLayer()
             },
@@ -69,7 +74,7 @@ fun LayerControl(
                 }
             }
             Box(
-                Modifier.weight(1f).aspectRatio(1f).shadow(5.dp, CircleShape)
+                Modifier.weight(1f).aspectRatio(1f).shadow(if (enabled) 5.dp else 0.dp, CircleShape)
                     .background(Color(0xFF11110F), CircleShape),
             )
         }
@@ -91,6 +96,7 @@ private fun LayerControlPreview() {
     CodexMacroTheme {
         LayerControl(
             activeLayer = 3,
+            enabled = true,
             onCycleLayer = {},
             modifier = Modifier.fillMaxSize(),
         )

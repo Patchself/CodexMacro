@@ -95,7 +95,7 @@ fun JoystickControl(
             Modifier
                 .fillMaxSize(0.8f)
                 .shadow(
-                    elevation = 3.dp,
+                    elevation = if (enabled) 3.dp else 0.dp,
                     shape = CircleShape,
                     ambientColor = Color.Black.copy(alpha = 0.1f),
                     spotColor = Color.Black.copy(alpha = 0.14f),
@@ -119,7 +119,7 @@ fun JoystickControl(
                     IntOffset(offset.x.roundToInt(), offset.y.roundToInt())
                 }
                 .shadow(
-                    elevation = 6.dp,
+                    elevation = if (enabled) 6.dp else 0.dp,
                     shape = CircleShape,
                     ambientColor = Color.Black.copy(alpha = 0.24f),
                     spotColor = Color.Black.copy(alpha = 0.32f),

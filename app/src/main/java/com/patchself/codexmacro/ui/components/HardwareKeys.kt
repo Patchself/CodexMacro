@@ -128,11 +128,12 @@ private fun HardwareKey(
     val haptics = LocalHapticFeedback.current
     val face = if (pressed) Color(0xFFE6E4DE) else Color(0xFFF9F8F4)
     val content = if (glow.luminance() > 0.65f) Color(0xFF33302B) else Color(0xFF242320)
+    val visibleGlow = if (enabled) glow else Color.Transparent
     Surface(
         modifier = modifier
             .alpha(if (enabled) 1f else 0.68f)
-            .shadow(if (pressed) 2.dp else 7.dp, keyShape)
-            .border(1.dp, glow, keyShape)
+            .shadow(if (!enabled) 0.dp else if (pressed) 2.dp else 7.dp, keyShape)
+            .border(1.dp, if (enabled) glow else Color(0xFFB8BFBB), keyShape)
             .semantics {
                 role = Role.Button
                 contentDescription = description
@@ -158,7 +159,7 @@ private fun HardwareKey(
         contentColor = content,
     ) {
         Box(
-            Modifier.fillMaxSize().background(Brush.radialGradient(listOf(glow, Color.Transparent))),
+            Modifier.fillMaxSize().background(Brush.radialGradient(listOf(visibleGlow, Color.Transparent))),
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {

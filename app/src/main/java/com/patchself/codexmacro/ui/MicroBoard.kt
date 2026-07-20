@@ -52,7 +52,7 @@ internal fun MicroBoard(
         modifier = modifier,
         shape = RoundedCornerShape(32.dp),
         color = Color(0xFFD6F4E3),
-        shadowElevation = 18.dp,
+        shadowElevation = if (state.isConnected) 18.dp else 0.dp,
         tonalElevation = 0.dp,
     ) {
         Surface(
@@ -98,7 +98,12 @@ internal fun MicroBoard(
                             }
                         }
                         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            LayerControl(activeLayer, onCycleLayer, Modifier.weight(1f).fillMaxSize())
+                            LayerControl(
+                                activeLayer,
+                                state.isConnected,
+                                onCycleLayer,
+                                Modifier.weight(1f).fillMaxSize(),
+                            )
                             CommandKey(
                                 commandKeycaps[4],
                                 "ACT10",
@@ -116,10 +121,6 @@ internal fun MicroBoard(
                         }
                     }
                 }
-                BoardScrew(Modifier.align(Alignment.TopStart))
-                BoardScrew(Modifier.align(Alignment.TopEnd))
-                BoardScrew(Modifier.align(Alignment.BottomStart))
-                BoardScrew(Modifier.align(Alignment.BottomEnd))
             }
         }
     }

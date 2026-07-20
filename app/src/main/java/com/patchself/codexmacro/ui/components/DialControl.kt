@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
@@ -60,24 +59,34 @@ fun DialControl(
                     val down = awaitFirstDown()
                     val center = Offset(size.width / 2f, size.height / 2f)
                     val distance = hypot(down.position.x - center.x, down.position.y - center.y)
-                    if (distance < minOf(size.width, size.height) * 0.28f) {
+                    var centerPressed = distance < minOf(size.width, size.height) * 0.28f
+                    var rotating = !centerPressed
+                    var lastAngle = angleFromCenter(down.position, center)
+                    var accumulatedAngle = 0f
+                    val stepAngle = (PI / 12).toFloat()
+
+                    if (centerPressed) {
                         haptics.performHapticFeedback(HapticFeedbackType.KeyboardTap)
                         onKey("ENC", 1, null)
-                        try {
-                            waitForUpOrCancellation()
-                        } finally {
-                            onKey("ENC", 0, null)
-                        }
-                    } else {
-                        var lastAngle = atan2(down.position.y - center.y, down.position.x - center.x)
-                        var accumulatedAngle = 0f
-                        val stepAngle = (PI / 12).toFloat()
+                    }
+
+                    try {
                         do {
                             val event = awaitPointerEvent()
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
                             if (change.positionChanged()) {
-                                val angle = atan2(change.position.y - center.y, change.position.x - center.x)
-                                accumulatedAngle += normalizedAngle(angle - lastAngle)
+                                var startedRotating = false
+                                if (centerPressed && (change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                                    centerPressed = false
+                                    rotating = true
+                                    startedRotating = true
+                                    onKey("ENC", 0, null)
+                                }
+
+                                val angle = angleFromCenter(change.position, center)
+                                if (rotating && !startedRotating) {
+                                    accumulatedAngle += normalizedAngle(angle - lastAngle)
+                                }
                                 lastAngle = angle
                                 while (abs(accumulatedAngle) >= stepAngle) {
                                     val clockwise = accumulatedAngle > 0f
@@ -89,13 +98,17 @@ fun DialControl(
                                 change.consume()
                             }
                         } while (change.pressed)
+                    } finally {
+                        if (centerPressed) {
+                            onKey("ENC", 0, null)
+                        }
                     }
                 }
             },
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            Modifier.fillMaxSize(0.78f).rotate(rotation).shadow(8.dp, CircleShape)
+            Modifier.fillMaxSize(0.78f).rotate(rotation).shadow(if (enabled) 8.dp else 0.dp, CircleShape)
                 .clip(CircleShape).background(Color(0xFFF2F3F0)).border(1.dp, Color(0xFFAAA8A2), CircleShape),
             contentAlignment = Alignment.Center,
         ) {
@@ -120,6 +133,9 @@ fun DialControl(
         }
     }
 }
+
+private fun angleFromCenter(position: Offset, center: Offset): Float =
+    atan2(position.y - center.y, position.x - center.x)
 
 private fun normalizedAngle(angle: Float): Float = when {
     angle > PI -> (angle - 2 * PI).toFloat()
