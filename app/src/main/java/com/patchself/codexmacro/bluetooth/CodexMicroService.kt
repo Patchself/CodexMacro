@@ -81,6 +81,7 @@ class CodexMicroService : Service() {
     private var batteryLevel: BluetoothGattCharacteristic? = null
     private var inputNotificationsEnabled = false
     private var batteryNotificationsEnabled = false
+    private var codexSessionActive = false
     private var sendingReports = false
     private var controllerStarted = false
     private var advertising = false
@@ -118,11 +119,7 @@ class CodexMicroService : Service() {
             advertising = true
             if (connectedDevice != null) {
                 stopAdvertising()
-                setPhase(
-                    ControllerPhase.CONNECTED,
-                    hostName = connectedDevice?.name ?: "macOS host",
-                    message = "Codex Micro is connected",
-                )
+                updateHostPhase()
                 return
             }
             setPhase(ControllerPhase.ADVERTISING, message = "Pair from macOS Bluetooth settings")
@@ -226,7 +223,11 @@ class CodexMicroService : Service() {
             if (descriptor.uuid == clientConfigUuid && offset == 0 && !preparedWrite) {
                 val enabled = value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
                 when (descriptor.characteristic) {
-                    inputReport -> inputNotificationsEnabled = enabled
+                    inputReport -> {
+                        inputNotificationsEnabled = enabled
+                        if (!enabled) codexSessionActive = false
+                        if (connectedDevice?.address == device.address && controllerStarted) updateHostPhase()
+                    }
                     batteryLevel -> batteryNotificationsEnabled = enabled
                 }
                 descriptor.value = value
@@ -366,7 +367,7 @@ class CodexMicroService : Service() {
         preferences.edit { putBoolean(controllerRunningKey, true) }
         if (gattServer != null) {
             if (connectedDevice != null) {
-                setPhase(ControllerPhase.CONNECTED, message = "Codex Micro is connected")
+                updateHostPhase()
             } else {
                 startAdvertising()
             }
@@ -485,11 +486,7 @@ class CodexMicroService : Service() {
         val service = pendingServices.pollFirst()
         if (service == null) {
             if (connectedDevice != null) {
-                setPhase(
-                    ControllerPhase.CONNECTED,
-                    hostName = connectedDevice?.name ?: "macOS host",
-                    message = "Codex Micro is connected",
-                )
+                updateHostPhase()
             } else {
                 startAdvertising()
             }
@@ -521,15 +518,12 @@ class CodexMicroService : Service() {
 
     private fun onHostConnected(device: BluetoothDevice) {
         connectedDevice = device
+        codexSessionActive = false
         decoder.reset()
         pendingReports.clear()
         sendingReports = false
         stopAdvertising()
-        setPhase(
-            ControllerPhase.CONNECTED,
-            hostName = device.name ?: "macOS host",
-            message = "Codex Micro is connected",
-        )
+        updateHostPhase()
     }
 
     private fun onHostDisconnected(device: BluetoothDevice) {
@@ -537,10 +531,39 @@ class CodexMicroService : Service() {
         connectedDevice = null
         inputNotificationsEnabled = false
         batteryNotificationsEnabled = false
+        codexSessionActive = false
         decoder.reset()
         pendingReports.clear()
         sendingReports = false
-        if (controllerStarted) startAdvertising()
+        if (controllerStarted) {
+            setPhase(
+                ControllerPhase.ADVERTISING,
+                hostName = null,
+                message = "Pair from macOS Bluetooth settings",
+            )
+            startAdvertising()
+        }
+    }
+
+    private fun updateHostPhase() {
+        val device = connectedDevice ?: return
+        if (inputNotificationsEnabled && codexSessionActive) {
+            setPhase(
+                ControllerPhase.CONNECTED,
+                hostName = device.name ?: "macOS host",
+                message = "Codex Micro is connected",
+            )
+        } else {
+            setPhase(
+                ControllerPhase.ADVERTISING,
+                hostName = device.name ?: "macOS host",
+                message = if (inputNotificationsEnabled) {
+                    "Waiting for Codex handshake"
+                } else {
+                    "Waiting for host input subscription"
+                },
+            )
+        }
     }
 
     private fun handleOutputWrite(
@@ -569,7 +592,11 @@ class CodexMicroService : Service() {
 
     private fun processOutputReport(value: ByteArray) {
         when (val result = decoder.consume(value)) {
-            is DecodeResult.Complete -> rpcEngine.handle(result.json)?.let(::sendJson)
+            is DecodeResult.Complete -> {
+                codexSessionActive = true
+                if (controllerStarted) updateHostPhase()
+                rpcEngine.handle(result.json)?.let(::sendJson)
+            }
             is DecodeResult.Invalid -> Log.w(logTag, result.reason)
             DecodeResult.Incomplete -> Unit
         }
@@ -681,6 +708,7 @@ class CodexMicroService : Service() {
         sendingReports = false
         inputNotificationsEnabled = false
         batteryNotificationsEnabled = false
+        codexSessionActive = false
     }
 
     private fun stopAdvertising() {

@@ -69,7 +69,7 @@ macOS 可能会按照设备地址缓存蓝牙身份、GATT 服务和 HID 报告�
 
 ### Q：Mac 上能看到设备，但应用仍显示 PAIRING，这算已经连接吗？
 
-不算。**PAIRING** 表示 Android 正在广播 BLE HID 服务，并等待 GATT 主机连接；**CONNECTED** 才表示 macOS 已经建立 GATT 连接。设备出现在 macOS 蓝牙列表中，不代表 HID 服务已经连接，也不代表 ChatGPT 已订阅设备报告。
+不算。**PAIRING** 表示 Android 正在广播 BLE HID 服务，或仍在等待主机及 Codex 握手；只有主机订阅控制器输入并发来有效的 Codex 协议请求后，才会显示 **CONNECTED**。设备出现在 macOS 蓝牙列表中，不代表 ChatGPT 已准备好接收报告。
 
 ### Q：macOS 已配对成功，但 ChatGPT 设置中没有 Codex Micro，应该检查什么？
 

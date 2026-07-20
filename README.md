@@ -70,7 +70,7 @@ Use this recovery sequence:
 
 ### Q: The app shows PAIRING even though the device is visible on the Mac. Is that connected?
 
-No. **PAIRING** means Android is advertising the BLE HID service and waiting for a GATT host connection. **CONNECTED** means macOS opened the GATT connection. A Bluetooth entry being visible in macOS does not mean the HID service is connected or that ChatGPT has subscribed to its reports.
+No. **PAIRING** means Android is advertising the BLE HID service or waiting for the host and Codex handshake. **CONNECTED** appears only after the host subscribes to controller input and sends a valid Codex protocol request. A Bluetooth entry being visible in macOS does not mean ChatGPT is ready to receive reports.
 
 ### Q: macOS pairs successfully, but Codex Micro is missing from ChatGPT settings. What should I check?
 
