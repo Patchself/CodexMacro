@@ -29,8 +29,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
-import kotlin.math.abs
+import kotlin.math.PI
+import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
@@ -76,28 +78,63 @@ fun JoystickControl(
                     } else {
                         dragOffset
                     }
-                    if (abs(dragOffset.x) + abs(dragOffset.y) > 12.dp.toPx()) {
-                        val angle = if (abs(dragOffset.x) > abs(dragOffset.y)) {
-                            if (dragOffset.x > 0) 0.0 else 0.5
-                        } else {
-                            if (dragOffset.y > 0) 0.25 else 0.75
-                        }
-                        onJoystick(angle, 1.0)
+                    val deadZone = 12.dp.toPx()
+                    if (dragDistance > deadZone) {
+                        val angle = (atan2(dragOffset.y, dragOffset.x) / (2 * PI) + 1.0) % 1.0
+                        val distance = ((dragDistance - deadZone) / (maxOffset - deadZone))
+                            .coerceIn(0f, 1f)
+                        onJoystick(angle, distance.toDouble())
+                    } else {
+                        onJoystick(0.0, 0.0)
                     }
                 }
             },
         contentAlignment = Alignment.Center,
     ) {
-        Box(Modifier.fillMaxSize(0.8f).background(Color(0xFFD8D6D0), CircleShape), contentAlignment = Alignment.Center) {
-            Box(
-                Modifier.fillMaxSize(0.72f).offset {
-                    IntOffset(offset.x.roundToInt(), offset.y.roundToInt())
-                }.shadow(8.dp, CircleShape).background(
-                    Brush.radialGradient(listOf(Color(0xFF383733), Color(0xFF090909))),
+        Box(
+            Modifier
+                .fillMaxSize(0.8f)
+                .shadow(
+                    elevation = 3.dp,
+                    shape = CircleShape,
+                    ambientColor = Color.Black.copy(alpha = 0.1f),
+                    spotColor = Color.Black.copy(alpha = 0.14f),
+                )
+                .background(
+                    Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0f to Color(0xFFDEDDD8),
+                            0.82f to Color(0xFFD8D6D0),
+                            1f to Color(0xFFC9C7C1),
+                        ),
+                    ),
                     CircleShape,
                 ),
-            )
-        }
+        )
+        Box(
+            Modifier
+                .fillMaxSize(0.576f)
+                .zIndex(1f)
+                .offset {
+                    IntOffset(offset.x.roundToInt(), offset.y.roundToInt())
+                }
+                .shadow(
+                    elevation = 6.dp,
+                    shape = CircleShape,
+                    ambientColor = Color.Black.copy(alpha = 0.24f),
+                    spotColor = Color.Black.copy(alpha = 0.32f),
+                )
+                .background(
+                    Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0f to Color(0xFF3B3A36),
+                            0.78f to Color(0xFF171716),
+                            1f to Color(0xFF0B0B0B),
+                        ),
+                    ),
+                    CircleShape,
+                ),
+        )
     }
 }
 

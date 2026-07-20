@@ -55,6 +55,7 @@ import kotlinx.serialization.json.put
 import java.io.ByteArrayOutputStream
 import java.util.ArrayDeque
 import java.util.UUID
+import kotlin.math.roundToInt
 
 @Suppress("MissingPermission", "DEPRECATION")
 class CodexMicroService : Service() {
@@ -83,6 +84,7 @@ class CodexMicroService : Service() {
     private var inputNotificationsEnabled = false
     private var batteryNotificationsEnabled = false
     private var codexSessionActive = false
+    private var pendingJoystickJson: String? = null
     private var sendingReports = false
     private var controllerStarted = false
     private var advertising = false
@@ -292,14 +294,17 @@ class CodexMicroService : Service() {
 
     fun sendJoystick(angle: Double, distance: Double) {
         if (!_state.value.isConnected) return
+        val compactAngle = (angle * joystickPrecision).roundToInt() / joystickPrecision
+        val compactDistance = (distance * joystickPrecision).roundToInt() / joystickPrecision
         val request = buildJsonObject {
             put("method", "v.oai.rad")
             put("params", buildJsonObject {
-                put("a", angle)
-                put("d", distance)
+                put("a", compactAngle)
+                put("d", compactDistance)
             })
         }
-        sendJson(request.toString())
+        pendingJoystickJson = request.toString()
+        if (!sendingReports) sendNextReport()
     }
 
     /** updateSettings persists controller options and applies safe connection-mode changes. */
@@ -534,6 +539,7 @@ class CodexMicroService : Service() {
         codexSessionActive = false
         decoder.reset()
         pendingReports.clear()
+        pendingJoystickJson = null
         sendingReports = false
         stopAdvertising()
         updateHostPhase()
@@ -547,6 +553,7 @@ class CodexMicroService : Service() {
         codexSessionActive = false
         decoder.reset()
         pendingReports.clear()
+        pendingJoystickJson = null
         sendingReports = false
         if (controllerStarted) {
             setPhase(
@@ -622,11 +629,18 @@ class CodexMicroService : Service() {
     }
 
     private fun sendNextReport() {
+        if (pendingReports.isEmpty()) {
+            pendingJoystickJson?.let { json ->
+                pendingReports.addAll(CodexProtocol.frame(json))
+                pendingJoystickJson = null
+            }
+        }
         val device = connectedDevice
         val characteristic = inputReport
         val report = pendingReports.pollFirst()
         if (device == null || characteristic == null || report == null || !inputNotificationsEnabled) {
             pendingReports.clear()
+            pendingJoystickJson = null
             sendingReports = false
             return
         }
@@ -716,6 +730,7 @@ class CodexMicroService : Service() {
         outputReport = null
         batteryLevel = null
         pendingReports.clear()
+        pendingJoystickJson = null
         pendingServices.clear()
         decoder.reset()
         sendingReports = false
@@ -881,6 +896,7 @@ class CodexMicroService : Service() {
         private const val layerKeycapsKey = "layer_keycaps"
         private const val controllerRunningKey = "controller_running"
         private const val reportDelayMs = 4L
+        private const val joystickPrecision = 1000.0
         private const val nameChangeDelayMs = 500L
 
         private val deviceInformationServiceUuid = uuid(0x180A)

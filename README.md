@@ -39,7 +39,7 @@ By default, the app temporarily changes the Android Bluetooth name to `Codex Mic
 
 - **Agent Keys:** Agent 1 through Agent 6 with host-provided status colors and breathing effects.
 - **Command Keys:** Fast, Approve, Decline, Fork, Mic, and Codex Send.
-- **Analog stick:** Four digital directions selected by dragging from the center.
+- **Analog stick:** Continuous radial input selected by dragging from the center.
 - **Dial:** Press and hold the center, or drag around the outer ring for continuous rotation steps.
 - **Layer:** Tap the bottom-left touch control to cycle through six layers; the three adjacent indicators show the active layer.
 

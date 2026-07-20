@@ -39,7 +39,7 @@ APK 输出路径为 `app/build/outputs/apk/debug/app-debug.apk`。
 
 - **Agent Keys：** Agent 1 至 Agent 6，显示主机下发的状态颜色与呼吸效果。
 - **Command Keys：** Fast、Approve、Decline、Fork、Mic 和 Codex Send。
-- **摇杆：** 从中心向四个方向拖动，触发对应的数字方向。
+- **摇杆：** 从中心向任意方向拖动，发送连续的径向输入。
 - **旋钮：** 按住中心可触发按下/松开；沿外圈拖动可连续触发顺时针或逆时针刻度。
 - **Layer：** 点击左下角触摸区循环切换 6 层；旁边三颗指示灯显示当前层。
 
