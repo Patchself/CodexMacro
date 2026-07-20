@@ -306,20 +306,38 @@ fun JoystickControl(
             .semantics { contentDescription = "Analog stick"; role = Role.Button; if (!enabled) disabled() }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
+                var dragOffset = Offset.Zero
                 detectDragGestures(
-                    onDragStart = { haptics.performHapticFeedback(HapticFeedbackType.KeyboardTap) },
-                    onDragEnd = { offset = Offset.Zero; onJoystick(0.0, 0.0) },
-                    onDragCancel = { offset = Offset.Zero; onJoystick(0.0, 0.0) },
+                    onDragStart = {
+                        dragOffset = Offset.Zero
+                        offset = Offset.Zero
+                        haptics.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+                    },
+                    onDragEnd = {
+                        dragOffset = Offset.Zero
+                        offset = Offset.Zero
+                        onJoystick(0.0, 0.0)
+                    },
+                    onDragCancel = {
+                        dragOffset = Offset.Zero
+                        offset = Offset.Zero
+                        onJoystick(0.0, 0.0)
+                    },
                 ) { change, dragAmount ->
                     change.consume()
-                    offset = (offset + dragAmount).let {
-                        Offset(it.x.coerceIn(-24.dp.toPx(), 24.dp.toPx()), it.y.coerceIn(-24.dp.toPx(), 24.dp.toPx()))
+                    dragOffset += dragAmount
+                    val maxOffset = 24.dp.toPx()
+                    val dragDistance = hypot(dragOffset.x, dragOffset.y)
+                    offset = if (dragDistance > maxOffset) {
+                        dragOffset * (maxOffset / dragDistance)
+                    } else {
+                        dragOffset
                     }
-                    if (abs(offset.x) + abs(offset.y) > 12.dp.toPx()) {
-                        val angle = if (abs(offset.x) > abs(offset.y)) {
-                            if (offset.x > 0) 0.0 else 0.5
+                    if (abs(dragOffset.x) + abs(dragOffset.y) > 12.dp.toPx()) {
+                        val angle = if (abs(dragOffset.x) > abs(dragOffset.y)) {
+                            if (dragOffset.x > 0) 0.0 else 0.5
                         } else {
-                            if (offset.y > 0) 0.25 else 0.75
+                            if (dragOffset.y > 0) 0.25 else 0.75
                         }
                         onJoystick(angle, 1.0)
                     }
