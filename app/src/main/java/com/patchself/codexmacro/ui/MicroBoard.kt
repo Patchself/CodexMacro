@@ -70,8 +70,8 @@ internal fun MicroBoard(
                     ) {
                         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             DialControl(state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
-                            AgentKey(0, state.threads[0], state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
-                            AgentKey(1, state.threads[1], state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
+                            AgentKey(0, state.threads[0], state.isConnected, settings.showKeyLabels, Modifier.weight(1f).fillMaxSize(), onKey)
+                            AgentKey(1, state.threads[1], state.isConnected, settings.showKeyLabels, Modifier.weight(1f).fillMaxSize(), onKey)
                             JoystickControl(state.isConnected, Modifier.weight(1f).fillMaxSize(), onJoystick)
                         }
                         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -81,6 +81,7 @@ internal fun MicroBoard(
                                     index,
                                     state.threads[index],
                                     state.isConnected,
+                                    settings.showKeyLabels,
                                     Modifier.weight(1f).fillMaxSize(),
                                     onKey,
                                 )
@@ -92,6 +93,7 @@ internal fun MicroBoard(
                                     keycap,
                                     "ACT${(index + 6).toString().padStart(2, '0')}",
                                     state.isConnected,
+                                    settings.showKeyLabels,
                                     Modifier.weight(1f).fillMaxSize(),
                                     onKey,
                                 )
@@ -108,6 +110,7 @@ internal fun MicroBoard(
                                 commandKeycaps[4],
                                 "ACT10",
                                 state.isConnected,
+                                settings.showKeyLabels,
                                 Modifier.weight(2f).fillMaxSize(),
                                 onKey,
                             )
@@ -115,6 +118,7 @@ internal fun MicroBoard(
                                 commandKeycaps[5],
                                 "ACT12",
                                 state.isConnected,
+                                settings.showKeyLabels,
                                 Modifier.weight(1f).fillMaxSize(),
                                 onKey,
                             )

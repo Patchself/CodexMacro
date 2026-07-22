@@ -318,6 +318,7 @@ class CodexMicroService : Service() {
         preferences.edit {
             putBoolean(stableConnectionKey, normalizedSettings.stableConnection)
             putBoolean(autoResumeKey, normalizedSettings.autoResume)
+            putBoolean(showKeyLabelsKey, normalizedSettings.showKeyLabels)
             putInt(activeLayerKey, normalizedSettings.activeLayer)
             putString(layerKeycapsKey, CommandKeycap.encodeLayers(normalizedSettings.layerKeycaps))
             remove(commandKeycapsKey)
@@ -793,6 +794,7 @@ class CodexMicroService : Service() {
         return ControllerSettings(
             stableConnection = preferences.getBoolean(stableConnectionKey, false),
             autoResume = preferences.getBoolean(autoResumeKey, false),
+            showKeyLabels = preferences.getBoolean(showKeyLabelsKey, true),
             activeLayer = preferences.getInt(activeLayerKey, 0).coerceIn(0, CommandKeycap.layerCount - 1),
             layerKeycaps = layers,
         )
@@ -891,6 +893,7 @@ class CodexMicroService : Service() {
         private const val renameActiveKey = "rename_active"
         private const val stableConnectionKey = "stable_connection"
         private const val autoResumeKey = "auto_resume"
+        private const val showKeyLabelsKey = "show_key_labels"
         private const val commandKeycapsKey = "command_keycaps"
         private const val activeLayerKey = "active_layer"
         private const val layerKeycapsKey = "layer_keycaps"

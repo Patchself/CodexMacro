@@ -58,6 +58,7 @@ fun AgentKey(
     index: Int,
     light: ThreadLight,
     enabled: Boolean,
+    showLabel: Boolean,
     modifier: Modifier = Modifier,
     onKey: (String, Int, Int?) -> Unit,
 ) {
@@ -73,6 +74,7 @@ fun AgentKey(
     HardwareKey(
         symbol = "+",
         description = "Agent ${index + 1}",
+        showLabel = showLabel,
         enabled = enabled,
         glow = statusColor.copy(alpha = lightAlpha),
         modifier = modifier,
@@ -87,6 +89,7 @@ fun CommandKey(
     keycap: CommandKeycap,
     id: String,
     enabled: Boolean,
+    showLabel: Boolean,
     modifier: Modifier = Modifier,
     onKey: (String, Int, Int?) -> Unit,
 ) {
@@ -94,6 +97,7 @@ fun CommandKey(
         symbol = if (keycap.iconRes() == null) keycap.glyph else null,
         iconRes = keycap.iconRes(),
         description = keycap.label,
+        showLabel = showLabel,
         enabled = enabled,
         glow = Color(0x553ECFA4),
         modifier = modifier,
@@ -166,6 +170,7 @@ private fun HardwareKey(
     symbol: String? = null,
     @DrawableRes iconRes: Int? = null,
     description: String,
+    showLabel: Boolean,
     enabled: Boolean,
     glow: Color,
     modifier: Modifier,
@@ -224,7 +229,9 @@ private fun HardwareKey(
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-                Text(description, fontSize = 8.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                if (showLabel) {
+                    Text(description, fontSize = 8.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                }
             }
         }
     }
@@ -249,6 +256,7 @@ private fun AgentKeyPreview() {
             index = 0,
             light = ThreadLight(color = 0x9D9AF4, brightness = 1f),
             enabled = true,
+            showLabel = true,
             modifier = Modifier.size(96.dp),
         ) { _, _, _ -> }
     }
@@ -262,6 +270,7 @@ private fun CommandKeyPreview() {
             keycap = CommandKeycap.Approve,
             id = "ACT07",
             enabled = true,
+            showLabel = true,
             modifier = Modifier.size(96.dp),
         ) { _, _, _ -> }
     }

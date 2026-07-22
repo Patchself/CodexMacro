@@ -101,6 +101,12 @@ internal fun SettingsContent(
             checked = settings.autoResume,
             onCheckedChange = { onSettingsChange(settings.copy(autoResume = it)) },
         )
+        SettingToggle(
+            title = "Show key labels",
+            description = "Display text labels below the virtual controller keys.",
+            checked = settings.showKeyLabels,
+            onCheckedChange = { onSettingsChange(settings.copy(showKeyLabels = it)) },
+        )
         KeycapLayout(settings, onSettingsChange, onEditSlot)
         Spacer(Modifier.padding(top = 2.dp))
         Button(
