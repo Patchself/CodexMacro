@@ -10,6 +10,13 @@ object CodexProtocol {
     const val payloadSize = 61
     const val messageType = 2
     const val maxRpcSize = 4096
+    const val effectOff = 0
+    const val effectSolid = 1
+    const val effectSnake = 2
+    const val effectRainbow = 3
+    const val effectBreath = 4
+    const val effectGradient = 5
+    const val effectShallowBreath = 6
 
     val reportMap = byteArrayOf(
         0x06, 0x00, 0xFF.toByte(),

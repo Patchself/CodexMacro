@@ -33,7 +33,7 @@ class CodexRpcEngine(
                     buildJsonObject {
                         put("version", firmwareVersion)
                         put("profile_index", 0)
-                        put("layer_index", layerProvider().coerceIn(1, 6))
+                        put("layer_index", layerProvider().coerceIn(0, 5))
                         put("battery", status.battery)
                         put("is_charging", status.isCharging)
                     },
@@ -64,8 +64,10 @@ class CodexRpcEngine(
                     id to ThreadLight(
                         color = value.longOr("c", current.color),
                         brightness = value.floatOr("b", current.brightness),
-                        effect = value.stringOr("e", current.effect),
+                        effect = value.intOr("e", current.effect),
                         speed = value.floatOr("s", current.speed),
+                        syncKeysLighting = value.booleanFlagOr("sk", current.syncKeysLighting),
+                        syncAmbientLighting = value.booleanFlagOr("sa", current.syncAmbientLighting),
                     ),
                 )
             }
@@ -84,8 +86,9 @@ class CodexRpcEngine(
     private fun JsonObject.toLightingSide(current: LightingSide) = LightingSide(
         color = longOr("c", current.color),
         brightness = floatOr("b", current.brightness),
-        effect = stringOr("e", current.effect),
+        effect = intOr("e", current.effect),
         speed = floatOr("s", current.speed),
+        magic = floatOr("m", current.magic),
     )
 
     private fun JsonObject.longOr(key: String, fallback: Long): Long =
@@ -94,8 +97,11 @@ class CodexRpcEngine(
     private fun JsonObject.floatOr(key: String, fallback: Float): Float =
         (this[key] as? JsonPrimitive)?.floatOrNull ?: fallback
 
-    private fun JsonObject.stringOr(key: String, fallback: String): String =
-        (this[key] as? JsonPrimitive)?.contentOrNull ?: fallback
+    private fun JsonObject.intOr(key: String, fallback: Int): Int =
+        (this[key] as? JsonPrimitive)?.intOrNull ?: fallback
+
+    private fun JsonObject.booleanFlagOr(key: String, fallback: Boolean): Boolean =
+        (this[key] as? JsonPrimitive)?.intOrNull?.let { it != 0 } ?: fallback
 
     private fun success(id: JsonElement) = response(id, buildJsonObject { put("ok", true) })
 

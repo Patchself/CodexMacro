@@ -15,7 +15,7 @@ class CodexRpcEngineTest {
 
     private val engine = CodexRpcEngine(
         statusProvider = { DeviceStatus(73, true) },
-        layerProvider = { 4 },
+        layerProvider = { 0 },
         threadLightProvider = { threads[it] },
         ambientProvider = { ambient },
         keysProvider = { keys },
@@ -36,22 +36,44 @@ class CodexRpcEngineTest {
         assertEquals(9, response.getValue("id").jsonPrimitive.int)
         assertEquals(73, result.getValue("battery").jsonPrimitive.int)
         assertTrue(result.getValue("is_charging").jsonPrimitive.content.toBoolean())
-        assertEquals(4, result.getValue("layer_index").jsonPrimitive.int)
+        assertEquals(0, result.getValue("layer_index").jsonPrimitive.int)
         assertEquals(CodexRpcEngine.firmwareVersion, result.getValue("version").jsonPrimitive.content)
     }
 
     @Test
     fun threadStatusPreservesFieldsOmittedByPartialUpdate() {
-        threads[2] = ThreadLight(color = 0x112233, brightness = 0.4f, effect = "off", speed = 2f)
+        threads[2] = ThreadLight(
+            color = 0x112233,
+            brightness = 0.4f,
+            effect = 0,
+            speed = 0.2f,
+            syncAmbientLighting = true,
+        )
 
         engine.handle(
-            parseObject("""{"method":"v.oai.thstatus","params":[{"id":2,"b":0.9,"e":"breath"}],"id":3}"""),
+            parseObject("""{"method":"v.oai.thstatus","params":[{"id":2,"b":0.9,"e":4,"sk":1}],"id":3}"""),
         )
 
         assertEquals(0x112233, threads[2].color)
         assertEquals(0.9f, threads[2].brightness)
-        assertEquals("breath", threads[2].effect)
-        assertEquals(2f, threads[2].speed)
+        assertEquals(4, threads[2].effect)
+        assertEquals(0.2f, threads[2].speed)
+        assertTrue(threads[2].syncKeysLighting)
+        assertTrue(threads[2].syncAmbientLighting)
+    }
+
+    @Test
+    fun lightingConfigParsesNumericEffectsAndMagic() {
+        engine.handle(
+            parseObject(
+                """{"method":"v.oai.rgbcfg","params":{"ambient":{"e":2,"b":0.7,"s":0.4,"m":0.3,"c":16711731},"keys":{"e":0,"b":0,"s":0,"m":0,"c":0}},"id":8}""",
+            ),
+        )
+
+        assertEquals(2, ambient.effect)
+        assertEquals(0.3f, ambient.magic)
+        assertEquals(16711731, ambient.color)
+        assertEquals(0, keys.effect)
     }
 
     @Test

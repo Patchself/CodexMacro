@@ -94,7 +94,7 @@ class CodexMicroService : Service() {
     private val rpcEngine by lazy {
         CodexRpcEngine(
             statusProvider = { DeviceStatus(_state.value.battery, _state.value.isCharging) },
-            layerProvider = { _settings.value.activeLayer + 1 },
+            layerProvider = { _settings.value.activeLayer },
             threadLightProvider = { _state.value.threads[it] },
             ambientProvider = { _state.value.ambient },
             keysProvider = { _state.value.keys },

@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patchself.codexmacro.R
 import com.patchself.codexmacro.bluetooth.CommandKeycap
+import com.patchself.codexmacro.protocol.CodexProtocol
 import com.patchself.codexmacro.protocol.ThreadLight
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 
@@ -63,14 +64,19 @@ fun AgentKey(
     onKey: (String, Int, Int?) -> Unit,
 ) {
     val statusColor = if (light.color == 0L) defaultAgentColor(index) else rgbColor(light.color)
+    val shallowBreath = light.effect == CodexProtocol.effectShallowBreath
     val transition = rememberInfiniteTransition(label = "agent-breath-$index")
     val breath by transition.animateFloat(
-        initialValue = 0.35f,
+        initialValue = if (shallowBreath) 0.5f else 0.35f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
         label = "agent-breath-alpha-$index",
     )
-    val lightAlpha = if (light.effect == "breath") breath else light.brightness.coerceIn(0.38f, 1f)
+    val lightAlpha = when (light.effect) {
+        CodexProtocol.effectOff -> 0f
+        CodexProtocol.effectBreath, CodexProtocol.effectShallowBreath -> breath * light.brightness.coerceIn(0f, 1f)
+        else -> light.brightness.coerceIn(0f, 1f)
+    }
     HardwareKey(
         symbol = "+",
         description = "Agent ${index + 1}",
@@ -90,6 +96,7 @@ fun CommandKey(
     id: String,
     enabled: Boolean,
     showLabel: Boolean,
+    glow: Color,
     modifier: Modifier = Modifier,
     onKey: (String, Int, Int?) -> Unit,
 ) {
@@ -99,7 +106,7 @@ fun CommandKey(
         description = keycap.label,
         showLabel = showLabel,
         enabled = enabled,
-        glow = Color(0x553ECFA4),
+        glow = glow,
         modifier = modifier,
         onPress = { onKey(id, 1, null) },
         onRelease = { onKey(id, 0, null) },
@@ -271,6 +278,7 @@ private fun CommandKeyPreview() {
             id = "ACT07",
             enabled = true,
             showLabel = true,
+            glow = Color(0x553ECFA4),
             modifier = Modifier.size(96.dp),
         ) { _, _, _ -> }
     }

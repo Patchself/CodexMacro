@@ -3,15 +3,18 @@ package com.patchself.codexmacro.protocol
 data class ThreadLight(
     val color: Long = 0,
     val brightness: Float = 0f,
-    val effect: String = "off",
+    val effect: Int = 0,
     val speed: Float = 0f,
+    val syncKeysLighting: Boolean = false,
+    val syncAmbientLighting: Boolean = false,
 )
 
 data class LightingSide(
     val color: Long = 0,
     val brightness: Float = 0f,
-    val effect: String = "off",
+    val effect: Int = 0,
     val speed: Float = 0f,
+    val magic: Float = 0f,
 )
 
 data class DeviceStatus(
