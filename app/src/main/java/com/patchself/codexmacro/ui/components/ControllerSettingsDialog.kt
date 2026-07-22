@@ -107,6 +107,12 @@ internal fun SettingsContent(
             checked = settings.showKeyLabels,
             onCheckedChange = { onSettingsChange(settings.copy(showKeyLabels = it)) },
         )
+        SettingToggle(
+            title = "Bluetooth data logging",
+            description = "Print received and sent BLE frames and JSON messages to Logcat.",
+            checked = settings.bluetoothDataLogging,
+            onCheckedChange = { onSettingsChange(settings.copy(bluetoothDataLogging = it)) },
+        )
         KeycapLayout(settings, onSettingsChange, onEditSlot)
         Spacer(Modifier.padding(top = 2.dp))
         Button(

@@ -4,6 +4,7 @@ data class ControllerSettings(
     val stableConnection: Boolean = false,
     val autoResume: Boolean = false,
     val showKeyLabels: Boolean = true,
+    val bluetoothDataLogging: Boolean = false,
     val activeLayer: Int = 0,
     val layerKeycaps: List<List<CommandKeycap>> = CommandKeycap.defaultLayers,
 )

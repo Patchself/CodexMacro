@@ -319,6 +319,7 @@ class CodexMicroService : Service() {
             putBoolean(stableConnectionKey, normalizedSettings.stableConnection)
             putBoolean(autoResumeKey, normalizedSettings.autoResume)
             putBoolean(showKeyLabelsKey, normalizedSettings.showKeyLabels)
+            putBoolean(bluetoothDataLoggingKey, normalizedSettings.bluetoothDataLogging)
             putInt(activeLayerKey, normalizedSettings.activeLayer)
             putString(layerKeycapsKey, CommandKeycap.encodeLayers(normalizedSettings.layerKeycaps))
             remove(commandKeycapsKey)
@@ -612,8 +613,10 @@ class CodexMicroService : Service() {
     }
 
     private fun processOutputReport(value: ByteArray) {
+        logBluetoothReceive(value)
         when (val result = decoder.consume(value)) {
             is DecodeResult.Complete -> {
+                logBluetoothReceive(result.json.toString())
                 codexSessionActive = true
                 if (controllerStarted) updateHostPhase()
                 rpcEngine.handle(result.json)?.let(::sendJson)
@@ -625,6 +628,7 @@ class CodexMicroService : Service() {
 
     private fun sendJson(json: String) {
         if (!_state.value.isConnected) return
+        logBluetoothSend(json)
         pendingReports.addAll(CodexProtocol.frame(json))
         if (!sendingReports) sendNextReport()
     }
@@ -647,6 +651,7 @@ class CodexMicroService : Service() {
         }
         sendingReports = true
         characteristic.value = report
+        logBluetoothSend(report)
         notifyCharacteristic(device, characteristic, report)
         handler.postDelayed(::sendNextReport, reportDelayMs)
     }
@@ -659,6 +664,24 @@ class CodexMicroService : Service() {
         characteristic.value = value
         notifyCharacteristic(device, characteristic, value)
     }
+
+    private fun logBluetoothReceive(value: ByteArray) {
+        if (_settings.value.bluetoothDataLogging) Log.d(logTag, "BLE RX: ${value.toHexString()}")
+    }
+
+    private fun logBluetoothReceive(json: String) {
+        if (_settings.value.bluetoothDataLogging) Log.d(logTag, "BLE RX JSON: $json")
+    }
+
+    private fun logBluetoothSend(value: ByteArray) {
+        if (_settings.value.bluetoothDataLogging) Log.d(logTag, "BLE TX: ${value.toHexString()}")
+    }
+
+    private fun logBluetoothSend(json: String) {
+        if (_settings.value.bluetoothDataLogging) Log.d(logTag, "BLE TX JSON: $json")
+    }
+
+    private fun ByteArray.toHexString(): String = joinToString(" ") { byte -> "%02X".format(byte.toInt() and 0xFF) }
 
     private fun notifyCharacteristic(
         device: BluetoothDevice,
@@ -795,6 +818,7 @@ class CodexMicroService : Service() {
             stableConnection = preferences.getBoolean(stableConnectionKey, false),
             autoResume = preferences.getBoolean(autoResumeKey, false),
             showKeyLabels = preferences.getBoolean(showKeyLabelsKey, true),
+            bluetoothDataLogging = preferences.getBoolean(bluetoothDataLoggingKey, false),
             activeLayer = preferences.getInt(activeLayerKey, 0).coerceIn(0, CommandKeycap.layerCount - 1),
             layerKeycaps = layers,
         )
@@ -894,6 +918,7 @@ class CodexMicroService : Service() {
         private const val stableConnectionKey = "stable_connection"
         private const val autoResumeKey = "auto_resume"
         private const val showKeyLabelsKey = "show_key_labels"
+        private const val bluetoothDataLoggingKey = "bluetooth_data_logging"
         private const val commandKeycapsKey = "command_keycaps"
         private const val activeLayerKey = "active_layer"
         private const val layerKeycapsKey = "layer_keycaps"
