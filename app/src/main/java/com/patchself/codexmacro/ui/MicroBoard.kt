@@ -65,25 +65,41 @@ internal fun MicroBoard(
 ) {
     val activeLayer = settings.activeLayer.coerceIn(0, CommandKeycap.layerCount - 1)
     val commandKeycaps = CommandKeycap.normalizeLayers(settings.layerKeycaps)[activeLayer]
+    val ambientNeedsAnimation = state.ambient.effect == CodexProtocol.effectSnake ||
+        state.ambient.effect == CodexProtocol.effectRainbow ||
+        state.ambient.effect == CodexProtocol.effectBreath ||
+        state.ambient.effect == CodexProtocol.effectShallowBreath
+    val keysNeedsAnimation = state.keys.effect == CodexProtocol.effectSnake ||
+        state.keys.effect == CodexProtocol.effectRainbow ||
+        state.keys.effect == CodexProtocol.effectBreath ||
+        state.keys.effect == CodexProtocol.effectShallowBreath
+    val needsLightingAnimation = ambientNeedsAnimation || keysNeedsAnimation
     val lightingSpeed = maxOf(state.ambient.speed, state.keys.speed).coerceIn(0f, 1f)
-    val lightingTransition = rememberInfiniteTransition(label = "global-lighting")
-    val lightingPhase by lightingTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            tween((4000f - lightingSpeed * 3200f).roundToInt(), easing = LinearEasing),
-        ),
-        label = "global-lighting-phase",
-    )
-    val lightingPulse by lightingTransition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            tween((1800f - lightingSpeed * 1200f).roundToInt()),
-            RepeatMode.Reverse,
-        ),
-        label = "global-lighting-pulse",
-    )
+    val lightingPhase: Float
+    val lightingPulse: Float
+    if (needsLightingAnimation) {
+        val lightingTransition = rememberInfiniteTransition(label = "global-lighting")
+        lightingPhase = lightingTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                tween((4000f - lightingSpeed * 3200f).roundToInt(), easing = LinearEasing),
+            ),
+            label = "global-lighting-phase",
+        ).value
+        lightingPulse = lightingTransition.animateFloat(
+            initialValue = 0.35f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                tween((1800f - lightingSpeed * 1200f).roundToInt()),
+                RepeatMode.Reverse,
+            ),
+            label = "global-lighting-pulse",
+        ).value
+    } else {
+        lightingPhase = 0f
+        lightingPulse = 1f
+    }
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(32.dp),

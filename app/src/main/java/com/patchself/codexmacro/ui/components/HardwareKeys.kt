@@ -64,18 +64,23 @@ fun AgentKey(
     onKey: (String, Int, Int?) -> Unit,
 ) {
     val statusColor = if (light.color == 0L) defaultAgentColor(index) else rgbColor(light.color)
-    val shallowBreath = light.effect == CodexProtocol.effectShallowBreath
-    val transition = rememberInfiniteTransition(label = "agent-breath-$index")
-    val breath by transition.animateFloat(
-        initialValue = if (shallowBreath) 0.5f else 0.35f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-        label = "agent-breath-alpha-$index",
-    )
-    val lightAlpha = when (light.effect) {
-        CodexProtocol.effectOff -> 0f
-        CodexProtocol.effectBreath, CodexProtocol.effectShallowBreath -> breath * light.brightness.coerceIn(0f, 1f)
-        else -> light.brightness.coerceIn(0f, 1f)
+    val needsBreathAnimation = light.effect == CodexProtocol.effectBreath ||
+        light.effect == CodexProtocol.effectShallowBreath
+    val lightAlpha = if (needsBreathAnimation) {
+        val shallowBreath = light.effect == CodexProtocol.effectShallowBreath
+        val transition = rememberInfiniteTransition(label = "agent-breath-$index")
+        val breath by transition.animateFloat(
+            initialValue = if (shallowBreath) 0.5f else 0.35f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+            label = "agent-breath-alpha-$index",
+        )
+        breath * light.brightness.coerceIn(0f, 1f)
+    } else {
+        when (light.effect) {
+            CodexProtocol.effectOff -> 0f
+            else -> light.brightness.coerceIn(0f, 1f)
+        }
     }
     HardwareKey(
         symbol = "+",
