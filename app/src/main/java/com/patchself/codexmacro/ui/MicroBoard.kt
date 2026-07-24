@@ -30,9 +30,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
+import android.graphics.Matrix
+import android.graphics.SweepGradient as AndroidSweepGradient
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,6 +56,7 @@ import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 @Composable
 internal fun MicroBoard(
@@ -68,11 +72,13 @@ internal fun MicroBoard(
     val ambientNeedsAnimation = state.ambient.effect == CodexProtocol.effectSnake ||
         state.ambient.effect == CodexProtocol.effectRainbow ||
         state.ambient.effect == CodexProtocol.effectBreath ||
-        state.ambient.effect == CodexProtocol.effectShallowBreath
+        state.ambient.effect == CodexProtocol.effectShallowBreath ||
+        state.ambient.effect == CodexProtocol.effectGradient
     val keysNeedsAnimation = state.keys.effect == CodexProtocol.effectSnake ||
         state.keys.effect == CodexProtocol.effectRainbow ||
         state.keys.effect == CodexProtocol.effectBreath ||
-        state.keys.effect == CodexProtocol.effectShallowBreath
+        state.keys.effect == CodexProtocol.effectShallowBreath ||
+        state.keys.effect == CodexProtocol.effectGradient
     val needsLightingAnimation = ambientNeedsAnimation || keysNeedsAnimation
     val lightingSpeed = maxOf(state.ambient.speed, state.keys.speed).coerceIn(0f, 1f)
     val lightingPhase: Float
@@ -218,29 +224,124 @@ private fun AmbientLighting(
     if (color.alpha == 0f) return
     Canvas(modifier) {
         val stroke = Stroke(width = 5.dp.toPx())
+        val glowStroke = Stroke(width = 14.dp.toPx())
         val cornerRadius = androidx.compose.ui.geometry.CornerRadius(32.dp.toPx())
+        val brightness = light.brightness.coerceIn(0f, 1f)
+        val cx = size.width / 2f
+        val cy = size.height / 2f
         when (light.effect) {
-            CodexProtocol.effectSnake -> rotate(phase) {
-                drawRoundRect(
-                    brush = Brush.sweepGradient(
-                        0f to Color.Transparent,
-                        0.72f to Color.Transparent,
-                        0.9f to color,
-                        1f to Color.Transparent,
+            CodexProtocol.effectSnake -> {
+                val baseArgb = rgbColor(light.color).copy(alpha = brightness).toArgb()
+                val transparent = Color.Transparent.toArgb()
+                val angleDeg = phase
+                val glowShader = AndroidSweepGradient(
+                    cx, cy,
+                    intArrayOf(
+                        transparent, transparent, transparent,
+                        android.graphics.Color.argb((0.15f * brightness * 255).toInt(),
+                            android.graphics.Color.red(baseArgb),
+                            android.graphics.Color.green(baseArgb),
+                            android.graphics.Color.blue(baseArgb)),
+                        android.graphics.Color.argb((0.85f * brightness * 255).toInt(),
+                            android.graphics.Color.red(baseArgb),
+                            android.graphics.Color.green(baseArgb),
+                            android.graphics.Color.blue(baseArgb)),
+                        baseArgb,
+                        android.graphics.Color.argb((0.6f * brightness * 255).toInt(),
+                            android.graphics.Color.red(baseArgb),
+                            android.graphics.Color.green(baseArgb),
+                            android.graphics.Color.blue(baseArgb)),
+                        transparent,
                     ),
+                    floatArrayOf(0f, 0.45f, 0.55f, 0.7f, 0.82f, 0.9f, 0.96f, 1f),
+                ).also {
+                    it.setLocalMatrix(Matrix().apply { setRotate(angleDeg, cx, cy) })
+                }
+                val coreShader = AndroidSweepGradient(
+                    cx, cy,
+                    intArrayOf(
+                        transparent, transparent, transparent,
+                        android.graphics.Color.argb((0.4f * brightness * 255).toInt(),
+                            android.graphics.Color.red(baseArgb),
+                            android.graphics.Color.green(baseArgb),
+                            android.graphics.Color.blue(baseArgb)),
+                        baseArgb,
+                        android.graphics.Color.argb((0.5f * brightness * 255).toInt(),
+                            android.graphics.Color.red(baseArgb),
+                            android.graphics.Color.green(baseArgb),
+                            android.graphics.Color.blue(baseArgb)),
+                        transparent,
+                    ),
+                    floatArrayOf(0f, 0.5f, 0.6f, 0.78f, 0.88f, 0.95f, 1f),
+                ).also {
+                    it.setLocalMatrix(Matrix().apply { setRotate(angleDeg, cx, cy) })
+                }
+                drawRoundRect(
+                    brush = ShaderBrush(glowShader),
+                    cornerRadius = cornerRadius,
+                    style = glowStroke,
+                )
+                drawRoundRect(
+                    brush = ShaderBrush(coreShader),
                     cornerRadius = cornerRadius,
                     style = stroke,
                 )
             }
-            CodexProtocol.effectRainbow -> rotate(phase) {
+            CodexProtocol.effectRainbow -> {
+                val angleDeg = phase
+                val rainbowColors = IntArray(37) { i ->
+                    android.graphics.Color.HSVToColor(floatArrayOf(i * 10f, 0.85f, 1f))
+                }
+                val rainbowStops = FloatArray(37) { i -> i / 36f }
+                val glowShader = AndroidSweepGradient(cx, cy, rainbowColors, rainbowStops).also {
+                    it.setLocalMatrix(Matrix().apply { setRotate(angleDeg, cx, cy) })
+                }
+                val coreColors = IntArray(37) { i ->
+                    android.graphics.Color.HSVToColor(floatArrayOf(i * 10f, 0.72f, 1f))
+                }
+                val coreShader = AndroidSweepGradient(cx, cy, coreColors, rainbowStops).also {
+                    it.setLocalMatrix(Matrix().apply { setRotate(angleDeg, cx, cy) })
+                }
                 drawRoundRect(
-                    brush = Brush.sweepGradient(
-                        listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red),
-                    ),
+                    brush = ShaderBrush(glowShader),
+                    cornerRadius = cornerRadius,
+                    style = glowStroke,
+                    alpha = 0.35f * brightness,
+                )
+                drawRoundRect(
+                    brush = ShaderBrush(coreShader),
                     cornerRadius = cornerRadius,
                     style = stroke,
-                    alpha = light.brightness.coerceIn(0f, 1f),
+                    alpha = brightness,
                 )
+            }
+            CodexProtocol.effectBreath, CodexProtocol.effectShallowBreath -> {
+                val glowAlpha = color.alpha * 0.35f
+                drawRoundRect(
+                    color = color.copy(alpha = glowAlpha),
+                    cornerRadius = cornerRadius,
+                    style = glowStroke,
+                )
+                drawRoundRect(color = color, cornerRadius = cornerRadius, style = stroke)
+            }
+            CodexProtocol.effectGradient -> {
+                val baseColor = rgbColor(light.color)
+                val shimmer = (sin(Math.toRadians(phase.toDouble())) * 0.5 + 0.5).toFloat()
+                val highlight = baseColor.copy(alpha = (0.6f + 0.4f * shimmer) * brightness)
+                drawRoundRect(
+                    color = baseColor.copy(alpha = 0.2f * brightness),
+                    cornerRadius = cornerRadius,
+                    style = glowStroke,
+                )
+                drawRoundRect(color = highlight, cornerRadius = cornerRadius, style = stroke)
+            }
+            CodexProtocol.effectSolid -> {
+                drawRoundRect(
+                    color = color.copy(alpha = color.alpha * 0.3f),
+                    cornerRadius = cornerRadius,
+                    style = glowStroke,
+                )
+                drawRoundRect(color = color, cornerRadius = cornerRadius, style = stroke)
             }
             else -> drawRoundRect(color = color, cornerRadius = cornerRadius, style = stroke)
         }
@@ -254,18 +355,27 @@ private fun lightingColor(
     animateSnake: Boolean = false,
 ): Color {
     if (light.effect == CodexProtocol.effectOff || light.brightness <= 0f) return Color.Transparent
+    val brightness = light.brightness.coerceIn(0f, 1f)
     val alpha = when (light.effect) {
-        CodexProtocol.effectBreath -> pulse
-        CodexProtocol.effectShallowBreath -> 0.5f + pulse * 0.5f
-        CodexProtocol.effectSnake -> if (animateSnake) {
-            0.15f + 0.85f * ((cos(Math.toRadians(phase.toDouble())) + 1.0) / 2.0).pow(4.0).toFloat()
-        } else {
-            1f
+        CodexProtocol.effectBreath -> {
+            val smooth = pulse * pulse * (3f - 2f * pulse)
+            smooth * brightness
         }
-        else -> 1f
-    } * light.brightness.coerceIn(0f, 1f)
+        CodexProtocol.effectShallowBreath -> {
+            val smooth = pulse * pulse * (3f - 2f * pulse)
+            (0.55f + 0.45f * smooth) * brightness
+        }
+        CodexProtocol.effectSnake -> if (animateSnake) {
+            val t = ((cos(Math.toRadians(phase.toDouble())) + 1.0) / 2.0)
+            val smooth = t * t * (3.0 - 2.0 * t)
+            (0.2f + 0.8f * smooth.pow(3.0)).toFloat() * brightness
+        } else {
+            brightness
+        }
+        else -> brightness
+    }
     val color = if (light.effect == CodexProtocol.effectRainbow) {
-        Color.hsv(phase, 0.72f, 1f)
+        Color.hsv(phase, 0.8f, 1f)
     } else {
         rgbColor(light.color)
     }
