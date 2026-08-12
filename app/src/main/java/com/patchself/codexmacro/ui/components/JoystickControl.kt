@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
+import com.patchself.codexmacro.R
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.hypot
@@ -45,10 +47,11 @@ fun JoystickControl(
 ) {
     var offset by remember { mutableStateOf(Offset.Zero) }
     val haptics = LocalHapticFeedback.current
+    val description = stringResource(R.string.analog_stick_description)
     Box(
         modifier = modifier
             .alpha(if (enabled) 1f else 0.68f)
-            .semantics { contentDescription = "Analog stick"; role = Role.Button; if (!enabled) disabled() }
+            .semantics { contentDescription = description; role = Role.Button; if (!enabled) disabled() }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
                 var dragOffset = Offset.Zero

@@ -24,12 +24,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.patchself.codexmacro.bluetooth.CommandKeycap
+import com.patchself.codexmacro.R
 import com.patchself.codexmacro.bluetooth.ControllerSettings
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 
@@ -98,33 +100,33 @@ internal fun SettingsContent(
         modifier = modifier.padding(22.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Controller settings", color = Color(0xFF181714), fontSize = 20.sp, fontWeight = FontWeight.Black)
+        Text(stringResource(R.string.settings_title), color = Color(0xFF181714), fontSize = 20.sp, fontWeight = FontWeight.Black)
         Text(
-            "Connection compatibility and the keycaps shown on this controller.",
+            stringResource(R.string.settings_description),
             color = Color(0xFF656159),
             fontSize = 12.sp,
         )
         SettingToggle(
-            title = "Stable connection mode",
-            description = "Keep the Codex Micro name, GATT services, and host connection active after Stop.",
+            title = stringResource(R.string.settings_stable_connection),
+            description = stringResource(R.string.settings_stable_connection_description),
             checked = settings.stableConnection,
             onCheckedChange = { onSettingsChange(settings.copy(stableConnection = it)) },
         )
         SettingToggle(
-            title = "Auto resume",
-            description = "Restore a running controller after process recovery or device reboot.",
+            title = stringResource(R.string.settings_auto_resume),
+            description = stringResource(R.string.settings_auto_resume_description),
             checked = settings.autoResume,
             onCheckedChange = { onSettingsChange(settings.copy(autoResume = it)) },
         )
         SettingToggle(
-            title = "Show key labels",
-            description = "Display text labels below the virtual controller keys.",
+            title = stringResource(R.string.settings_show_key_labels),
+            description = stringResource(R.string.settings_show_key_labels_description),
             checked = settings.showKeyLabels,
             onCheckedChange = { onSettingsChange(settings.copy(showKeyLabels = it)) },
         )
         SettingToggle(
-            title = "Bluetooth data logging",
-            description = "Print received and sent BLE frames and JSON messages to Logcat.",
+            title = stringResource(R.string.settings_bluetooth_logging),
+            description = stringResource(R.string.settings_bluetooth_logging_description),
             checked = settings.bluetoothDataLogging,
             onCheckedChange = { onSettingsChange(settings.copy(bluetoothDataLogging = it)) },
         )
@@ -139,7 +141,7 @@ internal fun SettingsContent(
                 contentColor = Color.White,
             ),
         ) {
-            Text("Done", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.action_done), fontWeight = FontWeight.Bold)
         }
     }
 }

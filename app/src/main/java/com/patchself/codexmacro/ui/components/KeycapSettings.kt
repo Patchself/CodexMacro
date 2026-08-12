@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -46,6 +47,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patchself.codexmacro.bluetooth.CommandKeycap
+import com.patchself.codexmacro.R
 import com.patchself.codexmacro.bluetooth.ControllerSettings
 import com.patchself.codexmacro.bluetooth.CustomKeyBinding
 import com.patchself.codexmacro.bluetooth.KeyboardKey
@@ -67,16 +69,20 @@ internal fun LayerKeyLayout(
     ) {
         Column(Modifier.weight(1f)) {
             Text(
-                if (isCodexLayer) "Layer 1 · Codex" else "Layer ${activeLayer + 1} · Custom",
+                if (isCodexLayer) {
+                    stringResource(R.string.layer_codex_title)
+                } else {
+                    stringResource(R.string.layer_custom_title, activeLayer + 1)
+                },
                 color = Color(0xFF24231F),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
             )
             Text(
                 if (isCodexLayer) {
-                    "Codex actions are fixed; only the six command icons can change."
+                    stringResource(R.string.layer_codex_description)
                 } else {
-                    "All twelve keys support a built-in or uploaded icon and a key shortcut."
+                    stringResource(R.string.layer_custom_description)
                 },
                 color = Color(0xFF77736B),
                 fontSize = 11.sp,
@@ -93,14 +99,15 @@ internal fun LayerKeyLayout(
                     onSettingsChange(settings.copy(customLayers = layers))
                 }
             },
-        ) { Text("Reset") }
+        ) { Text(stringResource(R.string.action_reset)) }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         repeat(CommandKeycap.layerCount) { layer ->
+            val editLayerDescription = stringResource(R.string.layer_edit_description, layer + 1)
             Surface(
                 modifier = Modifier
                     .weight(1f)
-                    .semantics { contentDescription = "Edit layer ${layer + 1}"; role = Role.Button }
+                    .semantics { contentDescription = editLayerDescription; role = Role.Button }
                     .clickable { onSettingsChange(settings.copy(activeLayer = layer)) },
                 shape = RoundedCornerShape(9.dp),
                 color = if (layer == activeLayer) Color(0xFFC8EBD9) else Color(0xFFE2E5E1),
@@ -123,17 +130,18 @@ internal fun LayerKeyLayout(
                 val slot = rowIndex * 2 + columnIndex
                 if (slot < slots) {
                     if (isCodexLayer) {
+                        val keycap = settings.codexKeycaps[slot]
                         KeySlot(
                             slot = slot,
-                            title = settings.codexKeycaps[slot].label,
-                            keycap = settings.codexKeycaps[slot],
+                            title = localizedKeycapLabel(keycap),
+                            keycap = keycap,
                             modifier = Modifier.weight(1f),
                         ) { onEditSlot(slot) }
                     } else {
                         val binding = customLayout!![slot]
                         KeySlot(
                             slot = slot,
-                            title = binding.shortcutLabel,
+                            title = localizedShortcutLabel(binding),
                             keycap = binding.keycap,
                             customIconUri = binding.customIconUri,
                             modifier = Modifier.weight(1f),
@@ -154,9 +162,10 @@ private fun KeySlot(
     customIconUri: String? = null,
     onClick: () -> Unit,
 ) {
+    val keyDescription = stringResource(R.string.key_description, slot + 1, title)
     Surface(
         modifier = modifier
-            .semantics { contentDescription = "Key ${slot + 1}: $title"; role = Role.Button }
+            .semantics { contentDescription = keyDescription; role = Role.Button }
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         color = Color(0xFFE2E5E1),
@@ -185,10 +194,12 @@ internal fun CodexKeycapPicker(
         modifier = Modifier.padding(22.dp).heightIn(max = 620.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("Layer 1 · Codex key ${slot + 1}", color = Color(0xFF181714), fontSize = 20.sp, fontWeight = FontWeight.Black)
-        Text("The Codex action stays fixed; choose its displayed command icon.", color = Color(0xFF656159), fontSize = 12.sp)
+        Text(stringResource(R.string.codex_key_title, slot + 1), color = Color(0xFF181714), fontSize = 20.sp, fontWeight = FontWeight.Black)
+        Text(stringResource(R.string.codex_key_description), color = Color(0xFF656159), fontSize = 12.sp)
         IconGrid(selected, null, Modifier.fillMaxWidth().weight(1f)) { keycap -> onSelect(keycap) }
-        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.End)) { Text("Back", fontWeight = FontWeight.Bold) }
+        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.End)) {
+            Text(stringResource(R.string.action_back), fontWeight = FontWeight.Bold)
+        }
     }
 }
 
@@ -217,8 +228,8 @@ internal fun CustomKeyPicker(
         modifier = Modifier.padding(22.dp).heightIn(max = 680.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Layer ${layer + 1} · custom key ${slot + 1}", color = Color(0xFF181714), fontSize = 20.sp, fontWeight = FontWeight.Black)
-        Text("Icon", color = Color(0xFF24231F), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.custom_key_title, layer + 1, slot + 1), color = Color(0xFF181714), fontSize = 20.sp, fontWeight = FontWeight.Black)
+        Text(stringResource(R.string.icon_title), color = Color(0xFF24231F), fontSize = 13.sp, fontWeight = FontWeight.Bold)
         IconGrid(
             selected = keycap,
             customIconUri = customIconUri,
@@ -230,13 +241,21 @@ internal fun CustomKeyPicker(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(
                 onClick = { iconPicker.launch(arrayOf("image/png", "image/jpeg", "image/webp")) },
-            ) { Text("Upload icon") }
+            ) { Text(stringResource(R.string.action_upload_icon)) }
             if (customIconUri != null) {
                 KeycapArtwork(keycap, customIconUri, Modifier.size(36.dp).align(Alignment.CenterVertically))
-                TextButton(onClick = { customIconUri = null }) { Text("Remove upload") }
+                TextButton(onClick = { customIconUri = null }) { Text(stringResource(R.string.action_remove_upload)) }
             }
         }
-        Text("Shortcut · ${CustomKeyBinding(keycap, customIconUri, key, modifiers).shortcutLabel}", color = Color(0xFF24231F), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(
+                R.string.shortcut_title,
+                localizedShortcutLabel(CustomKeyBinding(keycap, customIconUri, key, modifiers)),
+            ),
+            color = Color(0xFF24231F),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+        )
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -268,8 +287,10 @@ internal fun CustomKeyPicker(
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onBack) { Text("Back") }
-            Button(onClick = { onSave(CustomKeyBinding(keycap, customIconUri, key, modifiers)) }) { Text("Save") }
+            TextButton(onClick = onBack) { Text(stringResource(R.string.action_back)) }
+            Button(onClick = { onSave(CustomKeyBinding(keycap, customIconUri, key, modifiers)) }) {
+                Text(stringResource(R.string.action_save))
+            }
         }
     }
 }
@@ -288,10 +309,12 @@ private fun IconGrid(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(CommandKeycap.entries, key = CommandKeycap::storageId) { keycap ->
+            val label = localizedKeycapLabel(keycap)
+            val iconDescription = stringResource(R.string.icon_description, label)
             Surface(
                 modifier = Modifier
                     .height(70.dp)
-                    .semantics { contentDescription = "Icon ${keycap.label}"; role = Role.Button }
+                    .semantics { contentDescription = iconDescription; role = Role.Button }
                     .clickable { onSelect(keycap) },
                 shape = RoundedCornerShape(13.dp),
                 color = if (keycap == selected && customIconUri == null) Color(0xFFC8EBD9) else Color(0xFFE2E5E1),
@@ -299,7 +322,7 @@ private fun IconGrid(
                 Box(Modifier.fillMaxSize().padding(6.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         KeycapArtwork(keycap, modifier = Modifier.size(22.dp))
-                        Text(keycap.label, color = Color(0xFF555149), fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 1)
+                        Text(label, color = Color(0xFF555149), fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 1)
                     }
                 }
             }

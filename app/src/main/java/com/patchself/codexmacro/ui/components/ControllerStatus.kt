@@ -24,6 +24,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.patchself.codexmacro.R
 import com.patchself.codexmacro.protocol.ControllerPhase
 import com.patchself.codexmacro.protocol.ControllerState
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
@@ -91,12 +93,12 @@ fun ControllerStatus(
 @Composable
 private fun StatusIdentity(state: ControllerState, modifier: Modifier = Modifier) {
     Column(modifier) {
-        Text("Codex Micro", color = Color(0xFF181714), fontWeight = FontWeight.Black, fontSize = 20.sp)
+        Text(stringResource(R.string.controller_name), color = Color(0xFF181714), fontWeight = FontWeight.Black, fontSize = 20.sp)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(Modifier.size(7.dp).background(phaseColor(state.phase), CircleShape))
             Text(phaseLabel(state.phase), color = Color(0xFF656159), fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Text(
-                text = "· ${state.hostName ?: "ChatGPT Desktop"}",
+                text = "· ${state.hostName ?: stringResource(R.string.default_desktop_name)}",
                 color = Color(0xFF77736B),
                 fontSize = 11.sp,
                 maxLines = 1,
@@ -129,10 +131,14 @@ private fun StatusActions(
 ) {
     val content: @Composable () -> Unit = {
         if (state.phase == ControllerPhase.ADVERTISING) {
-            StatusButton("Pair", onOpenBluetoothSettings, vertical)
+            StatusButton(stringResource(R.string.action_pair), onOpenBluetoothSettings, vertical)
         }
-        StatusButton("Settings", onOpenSettings, vertical)
-        StatusButton(if (state.isRunning) "Stop" else "Start", if (state.isRunning) onStop else onStart, vertical)
+        StatusButton(stringResource(R.string.action_settings), onOpenSettings, vertical)
+        StatusButton(
+            stringResource(if (state.isRunning) R.string.notification_stop else R.string.notification_start),
+            if (state.isRunning) onStop else onStart,
+            vertical,
+        )
     }
     if (vertical) {
         Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) { content() }
@@ -170,14 +176,15 @@ private fun phaseColor(phase: ControllerPhase): Color = when (phase) {
     ControllerPhase.STOPPED -> Color(0xFF99958E)
 }
 
-private fun phaseLabel(phase: ControllerPhase): String = when (phase) {
-    ControllerPhase.STOPPED -> "OFFLINE"
-    ControllerPhase.STARTING -> "STARTING"
-    ControllerPhase.ADVERTISING -> "PAIRING"
-    ControllerPhase.CONNECTED -> "CONNECTED"
-    ControllerPhase.ERROR -> "ERROR"
-    ControllerPhase.UNSUPPORTED -> "UNSUPPORTED"
-}
+@Composable
+private fun phaseLabel(phase: ControllerPhase): String = stringResource(when (phase) {
+    ControllerPhase.STOPPED -> R.string.phase_offline
+    ControllerPhase.STARTING -> R.string.phase_starting
+    ControllerPhase.ADVERTISING -> R.string.phase_pairing
+    ControllerPhase.CONNECTED -> R.string.phase_connected
+    ControllerPhase.ERROR -> R.string.phase_error
+    ControllerPhase.UNSUPPORTED -> R.string.phase_unsupported
+})
 
 @Preview(name = "Connected status", widthDp = 520, showBackground = true)
 @Preview(name = "Compact status", widthDp = 360, showBackground = true)

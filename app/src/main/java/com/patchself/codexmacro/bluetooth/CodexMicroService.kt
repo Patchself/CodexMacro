@@ -127,18 +127,18 @@ class CodexMicroService : Service() {
                 updateHostPhase()
                 return
             }
-            setPhase(ControllerPhase.ADVERTISING, message = "Pair from macOS Bluetooth settings")
+            setPhase(ControllerPhase.ADVERTISING, message = getString(R.string.service_pair_from_settings))
         }
 
         override fun onStartFailure(errorCode: Int) {
-            fail("BLE advertising failed ($errorCode)")
+            fail(getString(R.string.service_advertising_failed, errorCode))
         }
     }
 
     private val gattCallback = object : BluetoothGattServerCallback() {
         override fun onServiceAdded(status: Int, service: BluetoothGattService?) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
-                fail("GATT service registration failed ($status)")
+                fail(getString(R.string.service_registration_failed, status))
                 return
             }
             addNextService()
@@ -380,7 +380,7 @@ class CodexMicroService : Service() {
             stopAdvertising()
             setPhase(
                 ControllerPhase.STOPPED,
-                message = "Controller paused; stable connection remains active",
+                message = getString(R.string.service_paused),
             )
             return
         }
@@ -399,19 +399,19 @@ class CodexMicroService : Service() {
         if (controllerStarted) return
         val bluetoothAdapter = adapter
         if (bluetoothAdapter == null || !packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            fail("Bluetooth LE is not supported")
+            fail(getString(R.string.service_ble_unsupported))
             return
         }
         if (!hasBluetoothPermissions()) {
-            fail("Nearby devices permission is required")
+            fail(getString(R.string.service_permission_required))
             return
         }
         if (!bluetoothAdapter.isEnabled) {
-            fail("Turn on Bluetooth before starting")
+            fail(getString(R.string.service_bluetooth_disabled))
             return
         }
         if (bluetoothAdapter.bluetoothLeAdvertiser == null) {
-            fail("This device does not support BLE peripheral advertising")
+            fail(getString(R.string.service_advertising_unsupported))
             return
         }
 
@@ -425,7 +425,7 @@ class CodexMicroService : Service() {
             }
             return
         }
-        setPhase(ControllerPhase.STARTING, message = "Preparing BLE HID services")
+        setPhase(ControllerPhase.STARTING, message = getString(R.string.service_preparing))
         if (nameRecoveryPending || recoverBluetoothName()) {
             nameRecoveryPending = false
             handler.postDelayed({ setControllerBluetoothName(bluetoothAdapter) }, nameChangeDelayMs)
@@ -437,7 +437,7 @@ class CodexMicroService : Service() {
     private fun setControllerBluetoothName(bluetoothAdapter: BluetoothAdapter) {
         if (!controllerStarted) return
         if (!saveAndSetBluetoothName(bluetoothAdapter)) {
-            fail("Unable to set Bluetooth name to Codex Micro")
+            fail(getString(R.string.service_name_failed))
             return
         }
         handler.postDelayed(::openGattServer, nameChangeDelayMs)
@@ -447,7 +447,7 @@ class CodexMicroService : Service() {
         if (!controllerStarted) return
         val server = bluetoothManager.openGattServer(this, gattCallback)
         if (server == null) {
-            fail("Unable to open GATT server")
+            fail(getString(R.string.service_gatt_open_failed))
             return
         }
         gattServer = server
@@ -559,14 +559,16 @@ class CodexMicroService : Service() {
             }
             return
         }
-        if (gattServer?.addService(service) != true) fail("Unable to add GATT service ${service.uuid}")
+        if (gattServer?.addService(service) != true) {
+            fail(getString(R.string.service_add_gatt_failed, service.uuid))
+        }
     }
 
     private fun startAdvertising() {
         if (advertising || connectedDevice != null) return
-        val bluetoothAdapter = adapter ?: return fail("Bluetooth adapter is unavailable")
+        val bluetoothAdapter = adapter ?: return fail(getString(R.string.service_adapter_unavailable))
         val advertiser = bluetoothAdapter.bluetoothLeAdvertiser
-            ?: return fail("BLE advertiser is unavailable")
+            ?: return fail(getString(R.string.service_advertiser_unavailable))
         val settings = AdvertiseSettings.Builder()
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
             .setConnectable(true)
@@ -609,7 +611,7 @@ class CodexMicroService : Service() {
             setPhase(
                 ControllerPhase.ADVERTISING,
                 hostName = null,
-                message = "Pair from macOS Bluetooth settings",
+                message = getString(R.string.service_pair_from_settings),
             )
             startAdvertising()
         }
@@ -621,19 +623,23 @@ class CodexMicroService : Service() {
         if (customLayerReady || inputNotificationsEnabled && codexSessionActive) {
             setPhase(
                 ControllerPhase.CONNECTED,
-                hostName = device.name ?: "macOS host",
-                message = if (customLayerReady) "Custom keyboard layer is connected" else "Codex Micro is connected",
+                hostName = device.name ?: getString(R.string.default_host_name),
+                message = if (customLayerReady) {
+                    getString(R.string.service_custom_layer_connected)
+                } else {
+                    getString(R.string.service_connected)
+                },
             )
         } else {
             setPhase(
                 ControllerPhase.ADVERTISING,
-                hostName = device.name ?: "macOS host",
+                hostName = device.name ?: getString(R.string.default_host_name),
                 message = if (_settings.value.activeLayer > 0 && !keyboardNotificationsEnabled) {
-                    "Waiting for host keyboard subscription"
+                    getString(R.string.service_waiting_keyboard_subscription)
                 } else if (inputNotificationsEnabled) {
-                    "Waiting for Codex handshake"
+                    getString(R.string.service_waiting_handshake)
                 } else {
-                    "Waiting for host input subscription"
+                    getString(R.string.service_waiting_input_subscription)
                 },
             )
         }
@@ -929,14 +935,17 @@ class CodexMicroService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val text = when (_state.value.phase) {
-            ControllerPhase.CONNECTED -> "Connected to ${_state.value.hostName ?: "macOS"}"
-            ControllerPhase.ADVERTISING -> "Waiting for macOS connection"
-            ControllerPhase.STOPPED -> "Controller paused; stable connection remains active"
+            ControllerPhase.CONNECTED -> getString(
+                R.string.notification_connected,
+                _state.value.hostName ?: getString(R.string.default_host_name),
+            )
+            ControllerPhase.ADVERTISING -> getString(R.string.notification_waiting_connection)
+            ControllerPhase.STOPPED -> getString(R.string.service_paused)
             else -> getString(R.string.notification_running)
         }
         return NotificationCompat.Builder(this, notificationChannelId)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Codex Micro")
+            .setContentTitle(getString(R.string.controller_name))
             .setContentText(text)
             .setContentIntent(contentIntent)
             .setOngoing(true)

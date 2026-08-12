@@ -41,6 +41,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
@@ -93,7 +94,7 @@ fun AgentKey(
     }
     HardwareKey(
         symbol = "+",
-        description = "Agent ${index + 1}",
+        description = stringResource(R.string.agent_description, index + 1),
         showLabel = showLabel,
         enabled = enabled,
         glow = statusColor.copy(alpha = lightAlpha),
@@ -117,7 +118,8 @@ fun CommandKey(
     HardwareKey(
         symbol = if (keycap.iconRes() == null) keycap.glyph else null,
         iconRes = keycap.iconRes(),
-        description = keycap.label,
+        description = localizedKeycapLabel(keycap),
+        largeIcon = keycap == CommandKeycap.Mic,
         showLabel = showLabel,
         enabled = enabled,
         glow = glow,
@@ -141,7 +143,7 @@ fun CustomKey(
         symbol = if (binding.customIconUri == null && binding.keycap.iconRes() == null) binding.keycap.glyph else null,
         iconRes = if (binding.customIconUri == null) binding.keycap.iconRes() else null,
         customIconUri = binding.customIconUri,
-        description = binding.shortcutLabel,
+        description = localizedShortcutLabel(binding),
         showLabel = showLabel,
         enabled = enabled,
         glow = glow,
@@ -222,6 +224,7 @@ private fun HardwareKey(
     @DrawableRes iconRes: Int? = null,
     customIconUri: String? = null,
     description: String,
+    largeIcon: Boolean = false,
     showLabel: Boolean,
     enabled: Boolean,
     glow: Color,
@@ -279,7 +282,7 @@ private fun HardwareKey(
                     Image(
                         painter = painterResource(iconRes),
                         contentDescription = null,
-                        modifier = Modifier.size(if (description == "Mic") 28.dp else 25.dp),
+                        modifier = Modifier.size(if (largeIcon) 28.dp else 25.dp),
                     )
                 } else {
                     Text(

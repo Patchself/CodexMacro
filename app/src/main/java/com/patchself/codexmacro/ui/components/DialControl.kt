@@ -27,6 +27,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
@@ -35,6 +36,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
+import com.patchself.codexmacro.R
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -49,10 +51,11 @@ fun DialControl(
 ) {
     val haptics = LocalHapticFeedback.current
     var rotation by remember { mutableFloatStateOf(0f) }
+    val description = stringResource(R.string.dial_description)
     Box(
         modifier = modifier
             .alpha(if (enabled) 1f else 0.68f)
-            .semantics { contentDescription = "Dial"; role = Role.Button; if (!enabled) disabled() }
+            .semantics { contentDescription = description; role = Role.Button; if (!enabled) disabled() }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
                 awaitEachGesture {

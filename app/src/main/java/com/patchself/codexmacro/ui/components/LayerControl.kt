@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
@@ -29,6 +30,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
+import com.patchself.codexmacro.R
 
 /** LayerControl cycles through six layers and renders the physical three-light code. */
 @Composable
@@ -41,12 +43,14 @@ fun LayerControl(
     val layer = activeLayer.coerceIn(0, 5)
     val indicators = layerIndicatorStates(layer)
     val haptics = LocalHapticFeedback.current
+    val layerDescription = stringResource(R.string.layer_description, layer + 1)
+    val layerStateDescription = stringResource(R.string.layer_state_description, layer + 1, 6)
     Box(
         modifier = modifier
             .alpha(if (enabled) 1f else 0.68f)
             .semantics {
-                contentDescription = "Layer ${layer + 1}"
-                stateDescription = "Layer ${layer + 1} of 6"
+                contentDescription = layerDescription
+                stateDescription = layerStateDescription
                 if (!enabled) disabled()
             }
             .clickable(enabled = enabled, role = Role.Button) {
