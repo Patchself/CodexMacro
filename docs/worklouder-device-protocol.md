@@ -135,6 +135,19 @@ BLE GATT value:    [channel, length, payload...]
 
 当前 CodexMacro 的 63 字节 report body 与外部包的 64 字节 node-hid report 在语义上是一致的。
 
+### 4.4 CodexMacro 自定义键盘层扩展
+
+CodexMacro 在同一 HID service 中额外暴露标准 Keyboard Usage Page `0x07` 的输入 Report：
+
+| Report ID | 类型 | 长度 | 用途 |
+|---:|---|---:|---|
+| `1` | Input | 8 bytes | modifiers、reserved、6-key rollover usages |
+| `6` | Input / Output | 63 bytes | Work Louder OAI 厂商 RPC |
+
+第 1 层只发送 Report ID `6` 的 Codex 输入；第 2 至 6 层的 12 个可编辑按键只发送 Report ID
+`1` 的标准键盘按下/松开。这个键盘 Report 是 CodexMacro 的应用扩展，不是 Work Louder OAI
+SDK 中发现的 layer schema。HID Report Map 发生变化后，已配对主机需要忽略设备并重新配对。
+
 ## 5. 串口传输层
 
 运行时串口参数：
@@ -842,7 +855,7 @@ Codex Micro 服务实际使用：
 
 ### 13.3 Layer index 基准
 
-`WLDeviceStatus` 声明将 `layer_index` 描述为 zero-based。当前 CodexMacro 返回 `activeLayer + 1`，即 `1..6`。ChatGPT Desktop 当前只从 status 中消费电池字段，因此暂未观察到 UI 影响；其他 host client 可能依赖零基索引。
+`WLDeviceStatus` 声明将 `layer_index` 描述为 zero-based。CodexMacro 返回 `activeLayer`，即 `0..5`，与该定义一致。
 
 ### 13.4 已正确对齐的部分
 

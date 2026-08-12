@@ -78,9 +78,11 @@ class CodexMicroService : Service() {
 
     private var gattServer: BluetoothGattServer? = null
     private var connectedDevice: BluetoothDevice? = null
+    private var keyboardInputReport: BluetoothGattCharacteristic? = null
     private var inputReport: BluetoothGattCharacteristic? = null
     private var outputReport: BluetoothGattCharacteristic? = null
     private var batteryLevel: BluetoothGattCharacteristic? = null
+    private var keyboardNotificationsEnabled = false
     private var inputNotificationsEnabled = false
     private var batteryNotificationsEnabled = false
     private var codexSessionActive = false
@@ -197,6 +199,11 @@ class CodexMicroService : Service() {
         ) {
             val value = when (descriptor.uuid) {
                 clientConfigUuid -> when (descriptor.characteristic) {
+                    keyboardInputReport -> if (keyboardNotificationsEnabled) {
+                        BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                    } else {
+                        BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE
+                    }
                     inputReport -> if (inputNotificationsEnabled) {
                         BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
                     } else {
@@ -226,6 +233,10 @@ class CodexMicroService : Service() {
             if (descriptor.uuid == clientConfigUuid && offset == 0 && !preparedWrite) {
                 val enabled = value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
                 when (descriptor.characteristic) {
+                    keyboardInputReport -> {
+                        keyboardNotificationsEnabled = enabled
+                        if (connectedDevice?.address == device.address && controllerStarted) updateHostPhase()
+                    }
                     inputReport -> {
                         inputNotificationsEnabled = enabled
                         if (!enabled) codexSessionActive = false
@@ -292,6 +303,21 @@ class CodexMicroService : Service() {
         sendJson(request.toString())
     }
 
+    /** sendShortcut emits a standard keyboard press or release report for a custom layer key. */
+    fun sendShortcut(binding: CustomKeyBinding, pressed: Boolean) {
+        val device = connectedDevice ?: return
+        val characteristic = keyboardInputReport ?: return
+        if (!keyboardNotificationsEnabled) return
+        val report = if (pressed) {
+            CodexProtocol.keyboardReport(binding.modifiers, binding.key.usage)
+        } else {
+            CodexProtocol.keyboardReport(0, 0)
+        }
+        characteristic.value = report
+        logBluetoothSend(report)
+        notifyCharacteristic(device, characteristic, report)
+    }
+
     fun sendJoystick(angle: Double, distance: Double) {
         if (!_state.value.isConnected) return
         val compactAngle = (angle * joystickPrecision).roundToInt() / joystickPrecision
@@ -312,7 +338,8 @@ class CodexMicroService : Service() {
         val previous = _settings.value
         val normalizedSettings = settings.copy(
             activeLayer = settings.activeLayer.coerceIn(0, CommandKeycap.layerCount - 1),
-            layerKeycaps = CommandKeycap.normalizeLayers(settings.layerKeycaps),
+            codexKeycaps = CommandKeycap.normalizeLayout(settings.codexKeycaps),
+            customLayers = CustomKeyBinding.normalizeLayers(settings.customLayers),
         )
         _settings.value = normalizedSettings
         preferences.edit {
@@ -321,8 +348,13 @@ class CodexMicroService : Service() {
             putBoolean(showKeyLabelsKey, normalizedSettings.showKeyLabels)
             putBoolean(bluetoothDataLoggingKey, normalizedSettings.bluetoothDataLogging)
             putInt(activeLayerKey, normalizedSettings.activeLayer)
-            putString(layerKeycapsKey, CommandKeycap.encodeLayers(normalizedSettings.layerKeycaps))
+            putString(codexKeycapsKey, CommandKeycap.encodeLayout(normalizedSettings.codexKeycaps))
+            putString(customLayersKey, CustomKeyBinding.encodeLayers(normalizedSettings.customLayers))
             remove(commandKeycapsKey)
+            remove(layerKeycapsKey)
+        }
+        if (previous.activeLayer != normalizedSettings.activeLayer && connectedDevice != null && controllerStarted) {
+            updateHostPhase()
         }
         if (previous.stableConnection && !normalizedSettings.stableConnection && !controllerStarted) {
             stopTransport()
@@ -464,7 +496,21 @@ class CodexMicroService : Service() {
                     BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED or BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED,
                 ),
             )
-            addDescriptor(reportReferenceDescriptor(0x01))
+            addDescriptor(reportReferenceDescriptor(CodexProtocol.reportId, 0x01))
+        }
+        keyboardInputReport = BluetoothGattCharacteristic(
+            reportUuid,
+            BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+            BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED,
+        ).apply {
+            value = ByteArray(CodexProtocol.keyboardReportSize)
+            addDescriptor(
+                BluetoothGattDescriptor(
+                    clientConfigUuid,
+                    BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED or BluetoothGattDescriptor.PERMISSION_WRITE_ENCRYPTED,
+                ),
+            )
+            addDescriptor(reportReferenceDescriptor(CodexProtocol.keyboardReportId, 0x01))
         }
         outputReport = BluetoothGattCharacteristic(
             reportUuid,
@@ -473,8 +519,9 @@ class CodexMicroService : Service() {
             BluetoothGattCharacteristic.PERMISSION_READ_ENCRYPTED or BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED,
         ).apply {
             value = ByteArray(CodexProtocol.reportBodySize)
-            addDescriptor(reportReferenceDescriptor(0x02))
+            addDescriptor(reportReferenceDescriptor(CodexProtocol.reportId, 0x02))
         }
+        hid.addCharacteristic(keyboardInputReport)
         hid.addCharacteristic(inputReport)
         hid.addCharacteristic(outputReport)
 
@@ -550,6 +597,7 @@ class CodexMicroService : Service() {
     private fun onHostDisconnected(device: BluetoothDevice) {
         if (connectedDevice?.address != device.address) return
         connectedDevice = null
+        keyboardNotificationsEnabled = false
         inputNotificationsEnabled = false
         batteryNotificationsEnabled = false
         codexSessionActive = false
@@ -569,17 +617,20 @@ class CodexMicroService : Service() {
 
     private fun updateHostPhase() {
         val device = connectedDevice ?: return
-        if (inputNotificationsEnabled && codexSessionActive) {
+        val customLayerReady = _settings.value.activeLayer > 0 && keyboardNotificationsEnabled
+        if (customLayerReady || inputNotificationsEnabled && codexSessionActive) {
             setPhase(
                 ControllerPhase.CONNECTED,
                 hostName = device.name ?: "macOS host",
-                message = "Codex Micro is connected",
+                message = if (customLayerReady) "Custom keyboard layer is connected" else "Codex Micro is connected",
             )
         } else {
             setPhase(
                 ControllerPhase.ADVERTISING,
                 hostName = device.name ?: "macOS host",
-                message = if (inputNotificationsEnabled) {
+                message = if (_settings.value.activeLayer > 0 && !keyboardNotificationsEnabled) {
+                    "Waiting for host keyboard subscription"
+                } else if (inputNotificationsEnabled) {
                     "Waiting for Codex handshake"
                 } else {
                     "Waiting for host input subscription"
@@ -711,6 +762,7 @@ class CodexMicroService : Service() {
     }
 
     private fun characteristicValue(characteristic: BluetoothGattCharacteristic): ByteArray = when (characteristic) {
+        keyboardInputReport -> characteristic.value ?: ByteArray(CodexProtocol.keyboardReportSize)
         inputReport -> characteristic.value ?: ByteArray(CodexProtocol.reportBodySize)
         outputReport -> characteristic.value ?: ByteArray(CodexProtocol.reportBodySize)
         batteryLevel -> byteArrayOf(_state.value.battery.toByte())
@@ -731,10 +783,10 @@ class CodexMicroService : Service() {
         )
     }
 
-    private fun reportReferenceDescriptor(type: Int) = BluetoothGattDescriptor(
+    private fun reportReferenceDescriptor(reportId: Int, type: Int) = BluetoothGattDescriptor(
         reportReferenceUuid,
         BluetoothGattDescriptor.PERMISSION_READ_ENCRYPTED,
-    ).apply { value = byteArrayOf(CodexProtocol.reportId.toByte(), type.toByte()) }
+    ).apply { value = byteArrayOf(reportId.toByte(), type.toByte()) }
 
     private fun readCharacteristic(uuid: UUID, value: ByteArray) = BluetoothGattCharacteristic(
         uuid,
@@ -750,6 +802,7 @@ class CodexMicroService : Service() {
         gattServer?.clearServices()
         gattServer?.close()
         gattServer = null
+        keyboardInputReport = null
         inputReport = null
         outputReport = null
         batteryLevel = null
@@ -758,6 +811,7 @@ class CodexMicroService : Service() {
         pendingServices.clear()
         decoder.reset()
         sendingReports = false
+        keyboardNotificationsEnabled = false
         inputNotificationsEnabled = false
         batteryNotificationsEnabled = false
         codexSessionActive = false
@@ -806,21 +860,21 @@ class CodexMicroService : Service() {
     }
 
     private fun loadSettings(): ControllerSettings {
-        val storedLayers = preferences.getString(layerKeycapsKey, null)
-        val layers = if (storedLayers != null) {
-            CommandKeycap.decodeLayers(storedLayers)
-        } else {
-            CommandKeycap.defaultLayers.toMutableList().apply {
-                this[0] = CommandKeycap.decodeLayout(preferences.getString(commandKeycapsKey, null))
-            }
-        }
+        val legacyLayers = preferences.getString(layerKeycapsKey, null)
+        val legacyFirstLayer = legacyLayers?.substringBefore(';')
+        val codexKeycaps = CommandKeycap.decodeLayout(
+            preferences.getString(codexKeycapsKey, null)
+                ?: legacyFirstLayer
+                ?: preferences.getString(commandKeycapsKey, null),
+        )
         return ControllerSettings(
             stableConnection = preferences.getBoolean(stableConnectionKey, false),
             autoResume = preferences.getBoolean(autoResumeKey, false),
             showKeyLabels = preferences.getBoolean(showKeyLabelsKey, true),
             bluetoothDataLogging = preferences.getBoolean(bluetoothDataLoggingKey, false),
             activeLayer = preferences.getInt(activeLayerKey, 0).coerceIn(0, CommandKeycap.layerCount - 1),
-            layerKeycaps = layers,
+            codexKeycaps = codexKeycaps,
+            customLayers = CustomKeyBinding.decodeLayers(preferences.getString(customLayersKey, null)),
         )
     }
 
@@ -922,6 +976,8 @@ class CodexMicroService : Service() {
         private const val commandKeycapsKey = "command_keycaps"
         private const val activeLayerKey = "active_layer"
         private const val layerKeycapsKey = "layer_keycaps"
+        private const val codexKeycapsKey = "codex_keycaps"
+        private const val customLayersKey = "custom_layers"
         private const val controllerRunningKey = "controller_running"
         private const val reportDelayMs = 4L
         private const val joystickPrecision = 1000.0

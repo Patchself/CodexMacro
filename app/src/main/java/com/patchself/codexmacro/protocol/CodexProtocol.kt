@@ -5,6 +5,8 @@ import kotlinx.serialization.json.JsonObject
 import java.io.ByteArrayOutputStream
 
 object CodexProtocol {
+    const val keyboardReportId = 1
+    const val keyboardReportSize = 8
     const val reportId = 6
     const val reportBodySize = 63
     const val payloadSize = 61
@@ -19,6 +21,30 @@ object CodexProtocol {
     const val effectShallowBreath = 6
 
     val reportMap = byteArrayOf(
+        0x05, 0x01,
+        0x09, 0x06,
+        0xA1.toByte(), 0x01,
+        0x85.toByte(), keyboardReportId.toByte(),
+        0x05, 0x07,
+        0x19, 0xE0.toByte(),
+        0x29, 0xE7.toByte(),
+        0x15, 0x00,
+        0x25, 0x01,
+        0x75, 0x01,
+        0x95.toByte(), 0x08,
+        0x81.toByte(), 0x02,
+        0x95.toByte(), 0x01,
+        0x75, 0x08,
+        0x81.toByte(), 0x01,
+        0x95.toByte(), 0x06,
+        0x75, 0x08,
+        0x15, 0x00,
+        0x25, 0x65,
+        0x05, 0x07,
+        0x19, 0x00,
+        0x29, 0x65,
+        0x81.toByte(), 0x00,
+        0xC0.toByte(),
         0x06, 0x00, 0xFF.toByte(),
         0x09, 0x01,
         0xA1.toByte(), 0x01,
@@ -45,6 +71,13 @@ object CodexProtocol {
             }
         }
     }
+
+    /** keyboardReport creates a standard six-key rollover keyboard input report. */
+    fun keyboardReport(modifiers: Int, usage: Int): ByteArray =
+        ByteArray(keyboardReportSize).also { report ->
+            report[0] = (modifiers and 0xFF).toByte()
+            report[2] = (usage and 0xFF).toByte()
+        }
 }
 
 sealed interface DecodeResult {

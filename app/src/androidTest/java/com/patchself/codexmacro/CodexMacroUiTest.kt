@@ -29,7 +29,7 @@ class CodexMacroUiTest {
         composeRule.onNodeWithText("Settings").performClick()
         composeRule.onNodeWithText("Stable connection mode").assertIsDisplayed()
         composeRule.onNodeWithText("Auto resume").assertIsDisplayed()
-        composeRule.onNodeWithText("Layer 1 keycap layout").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Layer 1 · Codex").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Done").performScrollTo().performClick()
     }
 
@@ -38,11 +38,22 @@ class CodexMacroUiTest {
         composeRule.onNodeWithText("Settings").performClick()
         composeRule.onNodeWithContentDescription("Edit layer 1").performScrollTo().performClick()
         composeRule.onNodeWithText("Reset").performScrollTo().performClick()
-        composeRule.onNodeWithContentDescription("Command key 1: Fast").performScrollTo().performClick()
-        composeRule.onNodeWithText("Layer 1 · keycap 1").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Keycap Bug").performClick()
+        composeRule.onNodeWithContentDescription("Key 1: Fast").performScrollTo().performClick()
+        composeRule.onNodeWithText("Layer 1 · Codex key 1").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Icon Bug").performClick()
         composeRule.onNodeWithText("1 · Bug").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Reset").performClick()
+    }
+
+    @Test
+    fun customLayerEditsAllKeysAndKeyboardShortcut() {
+        composeRule.onNodeWithText("Settings").performClick()
+        composeRule.onNodeWithContentDescription("Edit layer 2").performScrollTo().performClick()
+        composeRule.onNodeWithContentDescription("Key 1: 1").performScrollTo().performClick()
+        composeRule.onNodeWithText("Layer 2 · custom key 1").assertIsDisplayed()
+        composeRule.onNodeWithText("Upload icon").assertIsDisplayed()
+        composeRule.onNodeWithText("Command").performClick()
+        composeRule.onNodeWithText("Shortcut · Command + 1").assertIsDisplayed()
     }
 
     @Test

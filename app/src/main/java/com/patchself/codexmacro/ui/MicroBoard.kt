@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patchself.codexmacro.bluetooth.CommandKeycap
 import com.patchself.codexmacro.bluetooth.ControllerSettings
+import com.patchself.codexmacro.bluetooth.CustomKeyBinding
 import com.patchself.codexmacro.protocol.CodexProtocol
 import com.patchself.codexmacro.protocol.ControllerPhase
 import com.patchself.codexmacro.protocol.ControllerState
@@ -48,6 +49,7 @@ import com.patchself.codexmacro.protocol.LightingSide
 import com.patchself.codexmacro.protocol.ThreadLight
 import com.patchself.codexmacro.ui.components.AgentKey
 import com.patchself.codexmacro.ui.components.CommandKey
+import com.patchself.codexmacro.ui.components.CustomKey
 import com.patchself.codexmacro.ui.components.DialControl
 import com.patchself.codexmacro.ui.components.JoystickControl
 import com.patchself.codexmacro.ui.components.LayerControl
@@ -63,12 +65,15 @@ internal fun MicroBoard(
     state: ControllerState,
     settings: ControllerSettings,
     onKey: (String, Int, Int?) -> Unit,
+    onShortcut: (CustomKeyBinding, Boolean) -> Unit,
     onJoystick: (Double, Double) -> Unit,
     onCycleLayer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val activeLayer = settings.activeLayer.coerceIn(0, CommandKeycap.layerCount - 1)
-    val commandKeycaps = CommandKeycap.normalizeLayers(settings.layerKeycaps)[activeLayer]
+    val isCodexLayer = activeLayer == 0
+    val commandKeycaps = CommandKeycap.normalizeLayout(settings.codexKeycaps)
+    val customKeys = if (isCodexLayer) null else CustomKeyBinding.normalizeLayers(settings.customLayers)[activeLayer - 1]
     val ambientNeedsAnimation = state.ambient.effect == CodexProtocol.effectSnake ||
         state.ambient.effect == CodexProtocol.effectRainbow ||
         state.ambient.effect == CodexProtocol.effectBreath ||
@@ -128,49 +133,76 @@ internal fun MicroBoard(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                DialControl(state.isConnected, Modifier.weight(1f).fillMaxSize(), onKey)
-                                AgentKey(
-                                    0,
-                                    state.threads[0],
-                                    state.isConnected,
-                                    settings.showKeyLabels,
-                                    Modifier.weight(1f).fillMaxSize(),
-                                    onKey,
-                                )
-                                AgentKey(
-                                    1,
-                                    state.threads[1],
-                                    state.isConnected,
-                                    settings.showKeyLabels,
-                                    Modifier.weight(1f).fillMaxSize(),
-                                    onKey,
-                                )
-                                JoystickControl(state.isConnected, Modifier.weight(1f).fillMaxSize(), onJoystick)
+                                DialControl(state.isConnected && isCodexLayer, Modifier.weight(1f).fillMaxSize(), onKey)
+                                repeat(2) { index ->
+                                    if (isCodexLayer) {
+                                        AgentKey(
+                                            index,
+                                            state.threads[index],
+                                            state.isConnected,
+                                            settings.showKeyLabels,
+                                            Modifier.weight(1f).fillMaxSize(),
+                                            onKey,
+                                        )
+                                    } else {
+                                        CustomKey(
+                                            customKeys!![index],
+                                            state.isConnected,
+                                            settings.showKeyLabels,
+                                            lightingColor(state.keys, lightingPhase - index * 30f, lightingPulse, true),
+                                            Modifier.weight(1f).fillMaxSize(),
+                                            onShortcut,
+                                        )
+                                    }
+                                }
+                                JoystickControl(state.isConnected && isCodexLayer, Modifier.weight(1f).fillMaxSize(), onJoystick)
                             }
                             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 repeat(4) { offset ->
                                     val index = offset + 2
-                                    AgentKey(
-                                        index,
-                                        state.threads[index],
-                                        state.isConnected,
-                                        settings.showKeyLabels,
-                                        Modifier.weight(1f).fillMaxSize(),
-                                        onKey,
-                                    )
+                                    if (isCodexLayer) {
+                                        AgentKey(
+                                            index,
+                                            state.threads[index],
+                                            state.isConnected,
+                                            settings.showKeyLabels,
+                                            Modifier.weight(1f).fillMaxSize(),
+                                            onKey,
+                                        )
+                                    } else {
+                                        CustomKey(
+                                            customKeys!![index],
+                                            state.isConnected,
+                                            settings.showKeyLabels,
+                                            lightingColor(state.keys, lightingPhase - index * 30f, lightingPulse, true),
+                                            Modifier.weight(1f).fillMaxSize(),
+                                            onShortcut,
+                                        )
+                                    }
                                 }
                             }
                             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                commandKeycaps.take(4).forEachIndexed { index, keycap ->
-                                    CommandKey(
-                                        keycap,
-                                        "ACT${(index + 6).toString().padStart(2, '0')}",
-                                        state.isConnected,
-                                        settings.showKeyLabels,
-                                        lightingColor(state.keys, lightingPhase - index * 60f, lightingPulse, true),
-                                        Modifier.weight(1f).fillMaxSize(),
-                                        onKey,
-                                    )
+                                repeat(4) { index ->
+                                    if (isCodexLayer) {
+                                        CommandKey(
+                                            commandKeycaps[index],
+                                            "ACT${(index + 6).toString().padStart(2, '0')}",
+                                            state.isConnected,
+                                            settings.showKeyLabels,
+                                            lightingColor(state.keys, lightingPhase - index * 60f, lightingPulse, true),
+                                            Modifier.weight(1f).fillMaxSize(),
+                                            onKey,
+                                        )
+                                    } else {
+                                        CustomKey(
+                                            customKeys!![index + 6],
+                                            state.isConnected,
+                                            settings.showKeyLabels,
+                                            lightingColor(state.keys, lightingPhase - index * 60f, lightingPulse, true),
+                                            Modifier.weight(1f).fillMaxSize(),
+                                            onShortcut,
+                                        )
+                                    }
                                 }
                             }
                             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -180,24 +212,28 @@ internal fun MicroBoard(
                                     onCycleLayer,
                                     Modifier.weight(1f).fillMaxSize(),
                                 )
-                                CommandKey(
-                                    commandKeycaps[4],
-                                    "ACT10",
-                                    state.isConnected,
-                                    settings.showKeyLabels,
-                                    lightingColor(state.keys, lightingPhase - 240f, lightingPulse, true),
-                                    Modifier.weight(2f).fillMaxSize(),
-                                    onKey,
-                                )
-                                CommandKey(
-                                    commandKeycaps[5],
-                                    "ACT12",
-                                    state.isConnected,
-                                    settings.showKeyLabels,
-                                    lightingColor(state.keys, lightingPhase - 300f, lightingPulse, true),
-                                    Modifier.weight(1f).fillMaxSize(),
-                                    onKey,
-                                )
+                                listOf(4 to 2f, 5 to 1f).forEach { (index, weight) ->
+                                    if (isCodexLayer) {
+                                        CommandKey(
+                                            commandKeycaps[index],
+                                            if (index == 4) "ACT10" else "ACT12",
+                                            state.isConnected,
+                                            settings.showKeyLabels,
+                                            lightingColor(state.keys, lightingPhase - index * 60f, lightingPulse, true),
+                                            Modifier.weight(weight).fillMaxSize(),
+                                            onKey,
+                                        )
+                                    } else {
+                                        CustomKey(
+                                            customKeys!![index + 6],
+                                            state.isConnected,
+                                            settings.showKeyLabels,
+                                            lightingColor(state.keys, lightingPhase - index * 60f, lightingPulse, true),
+                                            Modifier.weight(weight).fillMaxSize(),
+                                            onShortcut,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -427,6 +463,7 @@ private fun MicroBoardPreview() {
             ),
             settings = ControllerSettings(),
             onKey = { _, _, _ -> },
+            onShortcut = { _, _ -> },
             onJoystick = { _, _ -> },
             onCycleLayer = {},
             modifier = Modifier.fillMaxWidth().padding(12.dp).aspectRatio(0.94f),

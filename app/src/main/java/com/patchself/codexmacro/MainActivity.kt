@@ -91,6 +91,7 @@ class MainActivity : ComponentActivity() {
                         startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
                     },
                     onKey = { key, action, agent -> service?.sendKey(key, action, agent) },
+                    onShortcut = { binding, pressed -> service?.sendShortcut(binding, pressed) },
                     onJoystick = { angle, distance -> service?.sendJoystick(angle, distance) },
                     onCycleLayer = { service?.cycleLayer() },
                 )

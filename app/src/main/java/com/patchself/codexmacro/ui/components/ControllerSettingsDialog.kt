@@ -33,7 +33,7 @@ import com.patchself.codexmacro.bluetooth.CommandKeycap
 import com.patchself.codexmacro.bluetooth.ControllerSettings
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 
-/** ControllerSettingsDialog edits connection behavior and per-layer keycaps. */
+/** ControllerSettingsDialog edits connection behavior, Codex icons, and custom layer shortcuts. */
 @Composable
 fun ControllerSettingsDialog(
     settings: ControllerSettings,
@@ -53,19 +53,34 @@ fun ControllerSettingsDialog(
                 SettingsContent(settings, onSettingsChange, onDismiss, onEditSlot = { editingSlot = it })
             } else {
                 val activeLayer = settings.activeLayer.coerceIn(0, CommandKeycap.layerCount - 1)
-                val layers = CommandKeycap.normalizeLayers(settings.layerKeycaps)
-                KeycapPicker(
-                    layer = activeLayer,
-                    slot = slot,
-                    selected = layers[activeLayer][slot],
-                    onSelect = { selected ->
-                        val updatedLayers = layers.map { it.toMutableList() }.toMutableList()
-                        updatedLayers[activeLayer][slot] = selected
-                        onSettingsChange(settings.copy(layerKeycaps = updatedLayers))
-                        editingSlot = null
-                    },
-                    onBack = { editingSlot = null },
-                )
+                if (activeLayer == 0) {
+                    val keycaps = CommandKeycap.normalizeLayout(settings.codexKeycaps)
+                    CodexKeycapPicker(
+                        slot = slot,
+                        selected = keycaps[slot],
+                        onSelect = { selected ->
+                            val updated = keycaps.toMutableList()
+                            updated[slot] = selected
+                            onSettingsChange(settings.copy(codexKeycaps = updated))
+                            editingSlot = null
+                        },
+                        onBack = { editingSlot = null },
+                    )
+                } else {
+                    val layers = com.patchself.codexmacro.bluetooth.CustomKeyBinding.normalizeLayers(settings.customLayers)
+                    CustomKeyPicker(
+                        layer = activeLayer,
+                        slot = slot,
+                        selected = layers[activeLayer - 1][slot],
+                        onSave = { selected ->
+                            val updatedLayers = layers.map { it.toMutableList() }.toMutableList()
+                            updatedLayers[activeLayer - 1][slot] = selected
+                            onSettingsChange(settings.copy(customLayers = updatedLayers))
+                            editingSlot = null
+                        },
+                        onBack = { editingSlot = null },
+                    )
+                }
             }
         }
     }
@@ -113,7 +128,7 @@ internal fun SettingsContent(
             checked = settings.bluetoothDataLogging,
             onCheckedChange = { onSettingsChange(settings.copy(bluetoothDataLogging = it)) },
         )
-        KeycapLayout(settings, onSettingsChange, onEditSlot)
+        LayerKeyLayout(settings, onSettingsChange, onEditSlot)
         Spacer(Modifier.padding(top = 2.dp))
         Button(
             onClick = onDismiss,

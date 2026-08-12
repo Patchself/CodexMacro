@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.patchself.codexmacro.bluetooth.ControllerSettings
+import com.patchself.codexmacro.bluetooth.CustomKeyBinding
 import com.patchself.codexmacro.protocol.ControllerState
 import com.patchself.codexmacro.ui.components.ControllerSettingsDialog
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
@@ -38,6 +39,7 @@ fun CodexMicroApp(
     onStop: () -> Unit,
     onOpenBluetoothSettings: () -> Unit,
     onKey: (String, Int, Int?) -> Unit,
+    onShortcut: (CustomKeyBinding, Boolean) -> Unit,
     onJoystick: (Double, Double) -> Unit,
     onCycleLayer: () -> Unit,
 ) {
@@ -56,6 +58,7 @@ fun CodexMicroApp(
             onOpenBluetoothSettings = onOpenBluetoothSettings,
             onOpenSettings = { showSettings = true },
             onKey = onKey,
+            onShortcut = onShortcut,
             onJoystick = onJoystick,
             onCycleLayer = onCycleLayer,
         )
@@ -87,6 +90,7 @@ private fun CodexMicroAppPreview() {
             onStop = {},
             onOpenBluetoothSettings = {},
             onKey = { _, _, _ -> },
+            onShortcut = { _, _ -> },
             onJoystick = { _, _ -> },
             onCycleLayer = {},
         )

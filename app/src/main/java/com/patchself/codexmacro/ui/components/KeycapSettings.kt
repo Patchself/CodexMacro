@@ -1,26 +1,41 @@
 package com.patchself.codexmacro.ui.components
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -32,30 +47,37 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patchself.codexmacro.bluetooth.CommandKeycap
 import com.patchself.codexmacro.bluetooth.ControllerSettings
+import com.patchself.codexmacro.bluetooth.CustomKeyBinding
+import com.patchself.codexmacro.bluetooth.KeyboardKey
+import com.patchself.codexmacro.bluetooth.KeyboardModifier
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 
 @Composable
-internal fun KeycapLayout(
+internal fun LayerKeyLayout(
     settings: ControllerSettings,
     onSettingsChange: (ControllerSettings) -> Unit,
     onEditSlot: (Int) -> Unit,
 ) {
     val activeLayer = settings.activeLayer.coerceIn(0, CommandKeycap.layerCount - 1)
-    val layers = CommandKeycap.normalizeLayers(settings.layerKeycaps)
-    val layout = layers[activeLayer]
+    val isCodexLayer = activeLayer == 0
+    val customLayout = if (isCodexLayer) null else CustomKeyBinding.normalizeLayers(settings.customLayers)[activeLayer - 1]
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
             Text(
-                "Layer ${activeLayer + 1} keycap layout",
+                if (isCodexLayer) "Layer 1 · Codex" else "Layer ${activeLayer + 1} · Custom",
                 color = Color(0xFF24231F),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                "Each layer keeps its own six legends. Control actions remain mapped by position on the host.",
+                if (isCodexLayer) {
+                    "Codex actions are fixed; only the six command icons can change."
+                } else {
+                    "All twelve keys support a built-in or uploaded icon and a key shortcut."
+                },
                 color = Color(0xFF77736B),
                 fontSize = 11.sp,
                 lineHeight = 15.sp,
@@ -63,13 +85,15 @@ internal fun KeycapLayout(
         }
         TextButton(
             onClick = {
-                val updatedLayers = layers.toMutableList()
-                updatedLayers[activeLayer] = CommandKeycap.defaultLayout
-                onSettingsChange(settings.copy(layerKeycaps = updatedLayers))
+                if (isCodexLayer) {
+                    onSettingsChange(settings.copy(codexKeycaps = CommandKeycap.defaultLayout))
+                } else {
+                    val layers = CustomKeyBinding.normalizeLayers(settings.customLayers).toMutableList()
+                    layers[activeLayer - 1] = CustomKeyBinding.defaultLayout
+                    onSettingsChange(settings.copy(customLayers = layers))
+                }
             },
-        ) {
-            Text("Reset")
-        }
+        ) { Text("Reset") }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         repeat(CommandKeycap.layerCount) { layer ->
@@ -82,7 +106,7 @@ internal fun KeycapLayout(
                 color = if (layer == activeLayer) Color(0xFFC8EBD9) else Color(0xFFE2E5E1),
             ) {
                 Text(
-                    text = "${layer + 1}",
+                    text = if (layer == 0) "1 C" else "${layer + 1}",
                     modifier = Modifier.padding(vertical = 7.dp),
                     color = Color(0xFF24231F),
                     fontSize = 11.sp,
@@ -92,34 +116,55 @@ internal fun KeycapLayout(
             }
         }
     }
-    layout.chunked(2).forEachIndexed { rowIndex, rowKeycaps ->
+    val slots = if (isCodexLayer) 6 else CustomKeyBinding.keyCount
+    repeat((slots + 1) / 2) { rowIndex ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            rowKeycaps.forEachIndexed { columnIndex, keycap ->
+            repeat(2) { columnIndex ->
                 val slot = rowIndex * 2 + columnIndex
-                KeycapSlot(slot, keycap, Modifier.weight(1f)) { onEditSlot(slot) }
+                if (slot < slots) {
+                    if (isCodexLayer) {
+                        KeySlot(
+                            slot = slot,
+                            title = settings.codexKeycaps[slot].label,
+                            keycap = settings.codexKeycaps[slot],
+                            modifier = Modifier.weight(1f),
+                        ) { onEditSlot(slot) }
+                    } else {
+                        val binding = customLayout!![slot]
+                        KeySlot(
+                            slot = slot,
+                            title = binding.shortcutLabel,
+                            keycap = binding.keycap,
+                            customIconUri = binding.customIconUri,
+                            modifier = Modifier.weight(1f),
+                        ) { onEditSlot(slot) }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun KeycapSlot(
+private fun KeySlot(
     slot: Int,
+    title: String,
     keycap: CommandKeycap,
     modifier: Modifier,
+    customIconUri: String? = null,
     onClick: () -> Unit,
 ) {
     Surface(
         modifier = modifier
-            .semantics { contentDescription = "Command key ${slot + 1}: ${keycap.label}"; role = Role.Button }
+            .semantics { contentDescription = "Key ${slot + 1}: $title"; role = Role.Button }
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         color = Color(0xFFE2E5E1),
     ) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            KeycapArtwork(keycap, Modifier.size(18.dp))
+            KeycapArtwork(keycap, customIconUri, Modifier.size(18.dp))
             Text(
-                text = "${slot + 1} · ${keycap.label}",
+                text = "${slot + 1} · $title",
                 modifier = Modifier.padding(start = 8.dp),
                 color = Color(0xFF555149),
                 fontSize = 11.sp,
@@ -130,75 +175,142 @@ private fun KeycapSlot(
 }
 
 @Composable
-internal fun KeycapPicker(
-    layer: Int,
+internal fun CodexKeycapPicker(
     slot: Int,
     selected: CommandKeycap,
     onSelect: (CommandKeycap) -> Unit,
     onBack: () -> Unit,
 ) {
-    val commandId = listOf("ACT06", "ACT07", "ACT08", "ACT09", "ACT10", "ACT12")[slot]
     Column(
         modifier = Modifier.padding(22.dp).heightIn(max = 620.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text(
-            "Layer ${layer + 1} · keycap ${slot + 1}",
-            color = Color(0xFF181714),
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Black,
-        )
-        Text(
-            "This changes the Android legend for $commandId on layer ${layer + 1}.",
-            color = Color(0xFF656159),
-            fontSize = 12.sp,
-        )
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        Text("Layer 1 · Codex key ${slot + 1}", color = Color(0xFF181714), fontSize = 20.sp, fontWeight = FontWeight.Black)
+        Text("The Codex action stays fixed; choose its displayed command icon.", color = Color(0xFF656159), fontSize = 12.sp)
+        IconGrid(selected, null, Modifier.fillMaxWidth().weight(1f)) { keycap -> onSelect(keycap) }
+        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.End)) { Text("Back", fontWeight = FontWeight.Bold) }
+    }
+}
+
+@Composable
+internal fun CustomKeyPicker(
+    layer: Int,
+    slot: Int,
+    selected: CustomKeyBinding,
+    onSave: (CustomKeyBinding) -> Unit,
+    onBack: () -> Unit,
+) {
+    val context = LocalContext.current
+    var keycap by remember(selected) { mutableStateOf(selected.keycap) }
+    var customIconUri by remember(selected) { mutableStateOf(selected.customIconUri) }
+    var key by remember(selected) { mutableStateOf(selected.key) }
+    var modifiers by remember(selected) { mutableIntStateOf(selected.modifiers) }
+    val iconPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            customIconUri = uri.toString()
+        }
+    }
+    Column(
+        modifier = Modifier.padding(22.dp).heightIn(max = 680.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("Layer ${layer + 1} · custom key ${slot + 1}", color = Color(0xFF181714), fontSize = 20.sp, fontWeight = FontWeight.Black)
+        Text("Icon", color = Color(0xFF24231F), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        IconGrid(
+            selected = keycap,
+            customIconUri = customIconUri,
+            modifier = Modifier.fillMaxWidth().height(178.dp),
         ) {
-            items(CommandKeycap.entries, key = CommandKeycap::storageId) { keycap ->
+            keycap = it
+            customIconUri = null
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = { iconPicker.launch(arrayOf("image/png", "image/jpeg", "image/webp")) },
+            ) { Text("Upload icon") }
+            if (customIconUri != null) {
+                KeycapArtwork(keycap, customIconUri, Modifier.size(36.dp).align(Alignment.CenterVertically))
+                TextButton(onClick = { customIconUri = null }) { Text("Remove upload") }
+            }
+        }
+        Text("Shortcut · ${CustomKeyBinding(keycap, customIconUri, key, modifiers).shortcutLabel}", color = Color(0xFF24231F), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            KeyboardModifier.entries.forEach { modifier ->
+                FilterChip(
+                    selected = modifiers and modifier.mask != 0,
+                    onClick = { modifiers = modifiers xor modifier.mask },
+                    label = { Text(modifier.label) },
+                )
+            }
+        }
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(6),
+            modifier = Modifier.fillMaxWidth().height(150.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            items(KeyboardKey.entries, key = KeyboardKey::storageId) { candidate ->
                 Surface(
-                    modifier = Modifier
-                        .size(76.dp)
-                        .semantics { contentDescription = "Keycap ${keycap.label}"; role = Role.Button }
-                        .clickable { onSelect(keycap) },
-                    shape = RoundedCornerShape(13.dp),
-                    color = if (keycap == selected) Color(0xFFC8EBD9) else Color(0xFFE2E5E1),
+                    modifier = Modifier.height(38.dp).clickable { key = candidate },
+                    shape = RoundedCornerShape(9.dp),
+                    color = if (candidate == key) Color(0xFFC8EBD9) else Color(0xFFE2E5E1),
                 ) {
-                    Box(Modifier.fillMaxSize().padding(6.dp), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            KeycapArtwork(keycap, Modifier.size(22.dp))
-                            Text(
-                                keycap.label,
-                                color = Color(0xFF555149),
-                                fontSize = 9.sp,
-                                textAlign = TextAlign.Center,
-                                maxLines = 2,
-                            )
-                        }
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(candidate.label, fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 1)
                     }
                 }
             }
         }
-        TextButton(onClick = onBack, modifier = Modifier.align(Alignment.End)) {
-            Text("Back", fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onBack) { Text("Back") }
+            Button(onClick = { onSave(CustomKeyBinding(keycap, customIconUri, key, modifiers)) }) { Text("Save") }
         }
     }
 }
 
-@Preview(name = "Keycap picker", widthDp = 440, heightDp = 620, showBackground = true)
 @Composable
-private fun KeycapPickerPreview() {
+private fun IconGrid(
+    selected: CommandKeycap,
+    customIconUri: String?,
+    modifier: Modifier,
+    onSelect: (CommandKeycap) -> Unit,
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(4),
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(CommandKeycap.entries, key = CommandKeycap::storageId) { keycap ->
+            Surface(
+                modifier = Modifier
+                    .height(70.dp)
+                    .semantics { contentDescription = "Icon ${keycap.label}"; role = Role.Button }
+                    .clickable { onSelect(keycap) },
+                shape = RoundedCornerShape(13.dp),
+                color = if (keycap == selected && customIconUri == null) Color(0xFFC8EBD9) else Color(0xFFE2E5E1),
+            ) {
+                Box(Modifier.fillMaxSize().padding(6.dp), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        KeycapArtwork(keycap, modifier = Modifier.size(22.dp))
+                        Text(keycap.label, color = Color(0xFF555149), fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Preview(name = "Custom key picker", widthDp = 440, heightDp = 700, showBackground = true)
+@Composable
+private fun CustomKeyPickerPreview() {
     CodexMacroTheme {
-        KeycapPicker(
-            layer = 0,
-            slot = 1,
-            selected = CommandKeycap.Approve,
-            onSelect = {},
-            onBack = {},
-        )
+        CustomKeyPicker(layer = 1, slot = 0, selected = CustomKeyBinding(), onSave = {}, onBack = {})
     }
 }

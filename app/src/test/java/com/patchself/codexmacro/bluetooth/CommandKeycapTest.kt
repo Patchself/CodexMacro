@@ -1,6 +1,9 @@
 package com.patchself.codexmacro.bluetooth_test
 
 import com.patchself.codexmacro.bluetooth.CommandKeycap
+import com.patchself.codexmacro.bluetooth.CustomKeyBinding
+import com.patchself.codexmacro.bluetooth.KeyboardKey
+import com.patchself.codexmacro.bluetooth.KeyboardModifier
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -30,11 +33,21 @@ class CommandKeycapTest {
     }
 
     @Test
-    fun encodedLayersRoundTripIndependentLayouts() {
-        val layers = CommandKeycap.defaultLayers.map { it.toMutableList() }
-        layers[1][0] = CommandKeycap.Bug
-        layers[5][5] = CommandKeycap.Yeet
+    fun customLayersRoundTripIconsUploadsAndShortcuts() {
+        val layers = CustomKeyBinding.defaultLayers.map { it.toMutableList() }
+        layers[0][0] = CustomKeyBinding(
+            keycap = CommandKeycap.Bug,
+            customIconUri = "content://icons/bug",
+            key = KeyboardKey.K,
+            modifiers = KeyboardModifier.Command.mask or KeyboardModifier.Shift.mask,
+        )
+        layers[4][11] = CustomKeyBinding(keycap = CommandKeycap.Yeet, key = KeyboardKey.F12)
 
-        assertEquals(layers, CommandKeycap.decodeLayers(CommandKeycap.encodeLayers(layers)))
+        assertEquals(layers, CustomKeyBinding.decodeLayers(CustomKeyBinding.encodeLayers(layers)))
+    }
+
+    @Test
+    fun malformedCustomLayersFallBackToDefaults() {
+        assertEquals(CustomKeyBinding.defaultLayers, CustomKeyBinding.decodeLayers("[]"))
     }
 }

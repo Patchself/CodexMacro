@@ -1,5 +1,7 @@
 package com.patchself.codexmacro.ui.components
 
+import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -23,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,10 +33,13 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -47,9 +53,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patchself.codexmacro.R
 import com.patchself.codexmacro.bluetooth.CommandKeycap
+import com.patchself.codexmacro.bluetooth.CustomKeyBinding
 import com.patchself.codexmacro.protocol.CodexProtocol
 import com.patchself.codexmacro.protocol.ThreadLight
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val keyShape = RoundedCornerShape(13.dp)
 
@@ -118,6 +127,30 @@ fun CommandKey(
     )
 }
 
+/** CustomKey renders a user-defined icon and emits its keyboard shortcut state. */
+@Composable
+fun CustomKey(
+    binding: CustomKeyBinding,
+    enabled: Boolean,
+    showLabel: Boolean,
+    glow: Color,
+    modifier: Modifier = Modifier,
+    onShortcut: (CustomKeyBinding, Boolean) -> Unit,
+) {
+    HardwareKey(
+        symbol = if (binding.customIconUri == null && binding.keycap.iconRes() == null) binding.keycap.glyph else null,
+        iconRes = if (binding.customIconUri == null) binding.keycap.iconRes() else null,
+        customIconUri = binding.customIconUri,
+        description = binding.shortcutLabel,
+        showLabel = showLabel,
+        enabled = enabled,
+        glow = glow,
+        modifier = modifier,
+        onPress = { onShortcut(binding, true) },
+        onRelease = { onShortcut(binding, false) },
+    )
+}
+
 @DrawableRes
 internal fun CommandKeycap.iconRes(): Int? = when (this) {
     CommandKeycap.Bug -> R.drawable.ic_key_bug
@@ -158,8 +191,14 @@ internal fun CommandKeycap.iconRes(): Int? = when (this) {
 @Composable
 internal fun KeycapArtwork(
     keycap: CommandKeycap,
+    customIconUri: String? = null,
     modifier: Modifier = Modifier,
 ) {
+    val customIcon = rememberUploadedIcon(customIconUri)
+    if (customIcon != null) {
+        Image(bitmap = customIcon, contentDescription = null, modifier = modifier)
+        return
+    }
     val iconRes = keycap.iconRes()
     if (iconRes != null) {
         Image(
@@ -181,6 +220,7 @@ internal fun KeycapArtwork(
 private fun HardwareKey(
     symbol: String? = null,
     @DrawableRes iconRes: Int? = null,
+    customIconUri: String? = null,
     description: String,
     showLabel: Boolean,
     enabled: Boolean,
@@ -228,7 +268,14 @@ private fun HardwareKey(
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                if (iconRes != null) {
+                val customIcon = rememberUploadedIcon(customIconUri)
+                if (customIcon != null) {
+                    Image(
+                        bitmap = customIcon,
+                        contentDescription = null,
+                        modifier = Modifier.size(25.dp),
+                    )
+                } else if (iconRes != null) {
                     Image(
                         painter = painterResource(iconRes),
                         contentDescription = null,
@@ -247,6 +294,24 @@ private fun HardwareKey(
             }
         }
     }
+}
+
+@Composable
+private fun rememberUploadedIcon(uri: String?): ImageBitmap? {
+    val context = LocalContext.current
+    return produceState<ImageBitmap?>(initialValue = null, uri) {
+        value = if (uri == null) {
+            null
+        } else {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(Uri.parse(uri))?.use { stream ->
+                        BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                    }
+                }.getOrNull()
+            }
+        }
+    }.value
 }
 
 internal fun rgbColor(value: Long): Color = Color((0xFF000000L or (value and 0xFFFFFF)).toInt())

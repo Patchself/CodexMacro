@@ -1,6 +1,7 @@
 package com.patchself.codexmacro.protocol
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlinx.serialization.json.int
@@ -55,6 +56,15 @@ class CodexProtocolTest {
         val complete = decoder.consume(replacement) as DecodeResult.Complete
 
         assertEquals("sys.version", complete.json["method"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun keyboardReportEncodesModifiersUsageAndRelease() {
+        assertArrayEquals(
+            byteArrayOf(0x0A, 0, 0x0E, 0, 0, 0, 0, 0),
+            CodexProtocol.keyboardReport(0x0A, 0x0E),
+        )
+        assertArrayEquals(ByteArray(CodexProtocol.keyboardReportSize), CodexProtocol.keyboardReport(0, 0))
     }
 
     private fun rawReport(payload: String): ByteArray {

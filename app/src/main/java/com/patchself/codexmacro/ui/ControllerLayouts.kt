@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.patchself.codexmacro.bluetooth.ControllerSettings
+import com.patchself.codexmacro.bluetooth.CustomKeyBinding
 import com.patchself.codexmacro.protocol.ControllerPhase
 import com.patchself.codexmacro.protocol.ControllerState
 import com.patchself.codexmacro.ui.components.ControllerStatus
@@ -29,6 +30,7 @@ internal data class ControllerCallbacks(
     val onOpenBluetoothSettings: () -> Unit,
     val onOpenSettings: () -> Unit,
     val onKey: (String, Int, Int?) -> Unit,
+    val onShortcut: (CustomKeyBinding, Boolean) -> Unit,
     val onJoystick: (Double, Double) -> Unit,
     val onCycleLayer: () -> Unit,
 )
@@ -100,6 +102,7 @@ private fun ControllerBoard(
             state = state,
             settings = settings,
             onKey = callbacks.onKey,
+            onShortcut = callbacks.onShortcut,
             onJoystick = callbacks.onJoystick,
             onCycleLayer = callbacks.onCycleLayer,
             modifier = Modifier.width(boardWidth).heightIn(max = 596.dp).aspectRatio(0.94f),
