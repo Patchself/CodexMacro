@@ -17,6 +17,7 @@
     <string name="action_save">Save</string>
     <string name="action_upload_icon">Upload icon</string>
     <string name="action_remove_upload">Remove upload</string>
+    <string name="action_customize_layers">Customize layers</string>
     <string name="phase_offline">OFFLINE</string>
     <string name="phase_starting">STARTING</string>
     <string name="phase_pairing">PAIRING</string>
@@ -24,7 +25,7 @@
     <string name="phase_error">ERROR</string>
     <string name="phase_unsupported">UNSUPPORTED</string>
     <string name="settings_title">Controller settings</string>
-    <string name="settings_description">Connection compatibility and the keycaps shown on this controller.</string>
+    <string name="settings_description">Connection compatibility and controller behavior.</string>
     <string name="settings_stable_connection">Stable connection mode</string>
     <string name="settings_stable_connection_description">Keep the Codex Micro name, GATT services, and host connection active after Stop.</string>
     <string name="settings_auto_resume">Auto resume</string>
@@ -37,6 +38,10 @@
     <string name="layer_custom_title">Layer %1$d · Custom</string>
     <string name="layer_codex_description">Codex actions are fixed; only the six command icons can change.</string>
     <string name="layer_custom_description">All twelve keys support a built-in or uploaded icon and a key shortcut.</string>
+    <string name="layer_editor_title">Layer customization</string>
+    <string name="layer_editor_description">Preview each complete controller layout before editing its keys.</string>
+    <string name="layer_pager_description">Swipe to preview and edit every complete controller layer.</string>
+    <string name="layer_preview_edit_hint">Tap an editable key on the controller preview.</string>
     <string name="layer_edit_description">Edit layer %1$d</string>
     <string name="layer_description">Layer %1$d</string>
     <string name="layer_state_description">Layer %1$d of %2$d</string>

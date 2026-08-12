@@ -17,6 +17,7 @@
     <string name="action_save">保存</string>
     <string name="action_upload_icon">上传图标</string>
     <string name="action_remove_upload">移除上传图标</string>
+    <string name="action_customize_layers">自定义图层</string>
     <string name="phase_offline">已离线</string>
     <string name="phase_starting">启动中</string>
     <string name="phase_pairing">配对中</string>
@@ -24,7 +25,7 @@
     <string name="phase_error">错误</string>
     <string name="phase_unsupported">不支持</string>
     <string name="settings_title">控制器设置</string>
-    <string name="settings_description">设置连接兼容性和控制器上显示的键帽。</string>
+    <string name="settings_description">设置连接兼容性与控制器行为。</string>
     <string name="settings_stable_connection">稳定连接模式</string>
     <string name="settings_stable_connection_description">停止后仍保留 Codex Micro 名称、GATT 服务和主机连接。</string>
     <string name="settings_auto_resume">自动恢复</string>
@@ -37,6 +38,10 @@
     <string name="layer_custom_title">第 %1$d 层 · 自定义</string>
     <string name="layer_codex_description">Codex 操作固定不变，只能更换六个命令图标。</string>
     <string name="layer_custom_description">十二个按键均可设置内置或上传图标及快捷键。</string>
+    <string name="layer_editor_title">图层自定义</string>
+    <string name="layer_editor_description">编辑按键前，先预览每一层的完整控制器布局。</string>
+    <string name="layer_pager_description">左右滑动，预览并编辑每个完整控制器图层。</string>
+    <string name="layer_preview_edit_hint">点击控制器预览中的可编辑按键。</string>
     <string name="layer_edit_description">编辑第 %1$d 层</string>
     <string name="layer_description">第 %1$d 层</string>
     <string name="layer_state_description">第 %1$d 层，共 %2$d 层</string>

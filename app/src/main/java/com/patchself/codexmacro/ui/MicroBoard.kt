@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import android.graphics.Matrix
 import android.graphics.SweepGradient as AndroidSweepGradient
@@ -40,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.patchself.codexmacro.bluetooth.CommandKeycap
+import com.patchself.codexmacro.R
 import com.patchself.codexmacro.bluetooth.ControllerSettings
 import com.patchself.codexmacro.bluetooth.CustomKeyBinding
 import com.patchself.codexmacro.protocol.CodexProtocol
@@ -53,6 +55,8 @@ import com.patchself.codexmacro.ui.components.CustomKey
 import com.patchself.codexmacro.ui.components.DialControl
 import com.patchself.codexmacro.ui.components.JoystickControl
 import com.patchself.codexmacro.ui.components.LayerControl
+import com.patchself.codexmacro.ui.components.localizedKeycapLabel
+import com.patchself.codexmacro.ui.components.localizedShortcutLabel
 import com.patchself.codexmacro.ui.components.rgbColor
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 import kotlin.math.cos
@@ -69,6 +73,7 @@ internal fun MicroBoard(
     onJoystick: (Double, Double) -> Unit,
     onCycleLayer: () -> Unit,
     modifier: Modifier = Modifier,
+    onEditSlot: ((Int) -> Unit)? = null,
 ) {
     val activeLayer = settings.activeLayer.coerceIn(0, CommandKeycap.layerCount - 1)
     val isCodexLayer = activeLayer == 0
@@ -151,7 +156,15 @@ internal fun MicroBoard(
                                             settings.showKeyLabels,
                                             lightingColor(state.keys, lightingPhase - index * 30f, lightingPulse, true),
                                             Modifier.weight(1f).fillMaxSize(),
-                                            onShortcut,
+                                            description = onEditSlot?.let {
+                                                stringResource(
+                                                    R.string.key_description,
+                                                    index + 1,
+                                                    localizedShortcutLabel(customKeys[index]),
+                                                )
+                                            },
+                                            onClick = onEditSlot?.let { edit -> { edit(index) } },
+                                            onShortcut = onShortcut,
                                         )
                                     }
                                 }
@@ -176,7 +189,15 @@ internal fun MicroBoard(
                                             settings.showKeyLabels,
                                             lightingColor(state.keys, lightingPhase - index * 30f, lightingPulse, true),
                                             Modifier.weight(1f).fillMaxSize(),
-                                            onShortcut,
+                                            description = onEditSlot?.let {
+                                                stringResource(
+                                                    R.string.key_description,
+                                                    index + 1,
+                                                    localizedShortcutLabel(customKeys[index]),
+                                                )
+                                            },
+                                            onClick = onEditSlot?.let { edit -> { edit(index) } },
+                                            onShortcut = onShortcut,
                                         )
                                     }
                                 }
@@ -191,7 +212,15 @@ internal fun MicroBoard(
                                             settings.showKeyLabels,
                                             lightingColor(state.keys, lightingPhase - index * 60f, lightingPulse, true),
                                             Modifier.weight(1f).fillMaxSize(),
-                                            onKey,
+                                            description = onEditSlot?.let {
+                                                stringResource(
+                                                    R.string.key_description,
+                                                    index + 1,
+                                                    localizedKeycapLabel(commandKeycaps[index]),
+                                                )
+                                            },
+                                            onClick = onEditSlot?.let { edit -> { edit(index) } },
+                                            onKey = onKey,
                                         )
                                     } else {
                                         CustomKey(
@@ -200,7 +229,15 @@ internal fun MicroBoard(
                                             settings.showKeyLabels,
                                             lightingColor(state.keys, lightingPhase - index * 60f, lightingPulse, true),
                                             Modifier.weight(1f).fillMaxSize(),
-                                            onShortcut,
+                                            description = onEditSlot?.let {
+                                                stringResource(
+                                                    R.string.key_description,
+                                                    index + 7,
+                                                    localizedShortcutLabel(customKeys[index + 6]),
+                                                )
+                                            },
+                                            onClick = onEditSlot?.let { edit -> { edit(index + 6) } },
+                                            onShortcut = onShortcut,
                                         )
                                     }
                                 }
@@ -221,7 +258,15 @@ internal fun MicroBoard(
                                             settings.showKeyLabels,
                                             lightingColor(state.keys, lightingPhase - index * 60f, lightingPulse, true),
                                             Modifier.weight(weight).fillMaxSize(),
-                                            onKey,
+                                            description = onEditSlot?.let {
+                                                stringResource(
+                                                    R.string.key_description,
+                                                    index + 1,
+                                                    localizedKeycapLabel(commandKeycaps[index]),
+                                                )
+                                            },
+                                            onClick = onEditSlot?.let { edit -> { edit(index) } },
+                                            onKey = onKey,
                                         )
                                     } else {
                                         CustomKey(
@@ -230,7 +275,15 @@ internal fun MicroBoard(
                                             settings.showKeyLabels,
                                             lightingColor(state.keys, lightingPhase - index * 60f, lightingPulse, true),
                                             Modifier.weight(weight).fillMaxSize(),
-                                            onShortcut,
+                                            description = onEditSlot?.let {
+                                                stringResource(
+                                                    R.string.key_description,
+                                                    index + 7,
+                                                    localizedShortcutLabel(customKeys[index + 6]),
+                                                )
+                                            },
+                                            onClick = onEditSlot?.let { edit -> { edit(index + 6) } },
+                                            onShortcut = onShortcut,
                                         )
                                     }
                                 }

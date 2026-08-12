@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,6 +17,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -27,10 +30,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -52,7 +58,11 @@ import com.patchself.codexmacro.bluetooth.ControllerSettings
 import com.patchself.codexmacro.bluetooth.CustomKeyBinding
 import com.patchself.codexmacro.bluetooth.KeyboardKey
 import com.patchself.codexmacro.bluetooth.KeyboardModifier
+import com.patchself.codexmacro.protocol.ControllerPhase
+import com.patchself.codexmacro.protocol.ControllerState
+import com.patchself.codexmacro.ui.MicroBoard
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun LayerKeyLayout(
@@ -61,46 +71,23 @@ internal fun LayerKeyLayout(
     onEditSlot: (Int) -> Unit,
 ) {
     val activeLayer = settings.activeLayer.coerceIn(0, CommandKeycap.layerCount - 1)
-    val isCodexLayer = activeLayer == 0
-    val customLayout = if (isCodexLayer) null else CustomKeyBinding.normalizeLayers(settings.customLayers)[activeLayer - 1]
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                if (isCodexLayer) {
-                    stringResource(R.string.layer_codex_title)
-                } else {
-                    stringResource(R.string.layer_custom_title, activeLayer + 1)
-                },
-                color = Color(0xFF24231F),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                if (isCodexLayer) {
-                    stringResource(R.string.layer_codex_description)
-                } else {
-                    stringResource(R.string.layer_custom_description)
-                },
-                color = Color(0xFF77736B),
-                fontSize = 11.sp,
-                lineHeight = 15.sp,
-            )
-        }
-        TextButton(
-            onClick = {
-                if (isCodexLayer) {
-                    onSettingsChange(settings.copy(codexKeycaps = CommandKeycap.defaultLayout))
-                } else {
-                    val layers = CustomKeyBinding.normalizeLayers(settings.customLayers).toMutableList()
-                    layers[activeLayer - 1] = CustomKeyBinding.defaultLayout
-                    onSettingsChange(settings.copy(customLayers = layers))
-                }
-            },
-        ) { Text(stringResource(R.string.action_reset)) }
+    val pagerState = rememberPagerState(initialPage = activeLayer) { CommandKeycap.layerCount }
+    val coroutineScope = rememberCoroutineScope()
+    val pagerDescription = stringResource(R.string.layer_pager_description)
+    LaunchedEffect(activeLayer) {
+        if (pagerState.currentPage != activeLayer) pagerState.animateScrollToPage(activeLayer)
     }
+    LaunchedEffect(pagerState.settledPage) {
+        if (pagerState.settledPage != activeLayer) {
+            onSettingsChange(settings.copy(activeLayer = pagerState.settledPage))
+        }
+    }
+    Text(
+        stringResource(R.string.layer_pager_description),
+        modifier = Modifier.padding(top = 8.dp),
+        color = Color(0xFF77736B),
+        fontSize = 11.sp,
+    )
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         repeat(CommandKeycap.layerCount) { layer ->
             val editLayerDescription = stringResource(R.string.layer_edit_description, layer + 1)
@@ -108,9 +95,12 @@ internal fun LayerKeyLayout(
                 modifier = Modifier
                     .weight(1f)
                     .semantics { contentDescription = editLayerDescription; role = Role.Button }
-                    .clickable { onSettingsChange(settings.copy(activeLayer = layer)) },
+                    .clickable {
+                        onSettingsChange(settings.copy(activeLayer = layer))
+                        coroutineScope.launch { pagerState.animateScrollToPage(layer) }
+                    },
                 shape = RoundedCornerShape(9.dp),
-                color = if (layer == activeLayer) Color(0xFFC8EBD9) else Color(0xFFE2E5E1),
+                color = if (layer == pagerState.currentPage) Color(0xFFC8EBD9) else Color(0xFFE2E5E1),
             ) {
                 Text(
                     text = if (layer == 0) "1 C" else "${layer + 1}",
@@ -123,63 +113,82 @@ internal fun LayerKeyLayout(
             }
         }
     }
-    val slots = if (isCodexLayer) 6 else CustomKeyBinding.keyCount
-    repeat((slots + 1) / 2) { rowIndex ->
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            repeat(2) { columnIndex ->
-                val slot = rowIndex * 2 + columnIndex
-                if (slot < slots) {
-                    if (isCodexLayer) {
-                        val keycap = settings.codexKeycaps[slot]
-                        KeySlot(
-                            slot = slot,
-                            title = localizedKeycapLabel(keycap),
-                            keycap = keycap,
-                            modifier = Modifier.weight(1f),
-                        ) { onEditSlot(slot) }
-                    } else {
-                        val binding = customLayout!![slot]
-                        KeySlot(
-                            slot = slot,
-                            title = localizedShortcutLabel(binding),
-                            keycap = binding.keycap,
-                            customIconUri = binding.customIconUri,
-                            modifier = Modifier.weight(1f),
-                        ) { onEditSlot(slot) }
-                    }
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(510.dp)
+            .semantics { contentDescription = pagerDescription },
+        beyondViewportPageCount = 1,
+    ) { layer ->
+        LayerPage(
+            layer = layer,
+            settings = settings,
+            isCurrentPage = layer == pagerState.currentPage,
+            onReset = {
+                if (layer == 0) {
+                    onSettingsChange(settings.copy(codexKeycaps = CommandKeycap.defaultLayout))
+                } else {
+                    val layers = CustomKeyBinding.normalizeLayers(settings.customLayers).toMutableList()
+                    layers[layer - 1] = CustomKeyBinding.defaultLayout
+                    onSettingsChange(settings.copy(customLayers = layers))
                 }
-            }
-        }
+            },
+            onEditSlot = onEditSlot,
+        )
     }
 }
 
 @Composable
-private fun KeySlot(
-    slot: Int,
-    title: String,
-    keycap: CommandKeycap,
-    modifier: Modifier,
-    customIconUri: String? = null,
-    onClick: () -> Unit,
+private fun LayerPage(
+    layer: Int,
+    settings: ControllerSettings,
+    isCurrentPage: Boolean,
+    onReset: () -> Unit,
+    onEditSlot: (Int) -> Unit,
 ) {
-    val keyDescription = stringResource(R.string.key_description, slot + 1, title)
-    Surface(
-        modifier = modifier
-            .semantics { contentDescription = keyDescription; role = Role.Button }
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFE2E5E1),
+    val isCodexLayer = layer == 0
+    val pageSemantics = if (isCurrentPage) Modifier else Modifier.clearAndSetSemantics { }
+    Column(
+        modifier = Modifier.fillMaxSize().then(pageSemantics).padding(top = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            KeycapArtwork(keycap, customIconUri, Modifier.size(18.dp))
-            Text(
-                text = "${slot + 1} · $title",
-                modifier = Modifier.padding(start = 8.dp),
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (isCodexLayer) stringResource(R.string.layer_codex_title)
+                    else stringResource(R.string.layer_custom_title, layer + 1),
+                    color = Color(0xFF24231F),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    if (isCodexLayer) stringResource(R.string.layer_codex_description)
+                    else stringResource(R.string.layer_custom_description),
+                    color = Color(0xFF77736B),
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                )
+            }
+            TextButton(onClick = onReset) { Text(stringResource(R.string.action_reset)) }
+        }
+        MicroBoard(
+            state = ControllerState(phase = ControllerPhase.CONNECTED),
+            settings = settings.copy(activeLayer = layer, showKeyLabels = true),
+            onKey = { _, _, _ -> },
+            onShortcut = { _, _ -> },
+            onJoystick = { _, _ -> },
+            onCycleLayer = {},
+            modifier = Modifier.fillMaxWidth().aspectRatio(0.94f),
+            onEditSlot = onEditSlot,
+        )
+        Text(
+            stringResource(R.string.layer_preview_edit_hint),
+            modifier = Modifier.fillMaxWidth(),
                 color = Color(0xFF555149),
                 fontSize = 11.sp,
-                maxLines = 1,
-            )
-        }
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

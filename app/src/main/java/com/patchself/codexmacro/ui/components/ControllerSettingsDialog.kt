@@ -13,14 +13,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,19 +27,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.patchself.codexmacro.bluetooth.CommandKeycap
 import com.patchself.codexmacro.R
 import com.patchself.codexmacro.bluetooth.ControllerSettings
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 
-/** ControllerSettingsDialog edits connection behavior, Codex icons, and custom layer shortcuts. */
+/** ControllerSettingsDialog edits connection and controller behavior. */
 @Composable
 fun ControllerSettingsDialog(
     settings: ControllerSettings,
     onSettingsChange: (ControllerSettings) -> Unit,
+    onOpenLayerEditor: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var editingSlot by rememberSaveable { mutableStateOf<Int?>(null) }
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier.fillMaxWidth().widthIn(max = 440.dp),
@@ -50,40 +46,12 @@ fun ControllerSettingsDialog(
             color = Color(0xFFF0F2EF),
             shadowElevation = 20.dp,
         ) {
-            val slot = editingSlot
-            if (slot == null) {
-                SettingsContent(settings, onSettingsChange, onDismiss, onEditSlot = { editingSlot = it })
-            } else {
-                val activeLayer = settings.activeLayer.coerceIn(0, CommandKeycap.layerCount - 1)
-                if (activeLayer == 0) {
-                    val keycaps = CommandKeycap.normalizeLayout(settings.codexKeycaps)
-                    CodexKeycapPicker(
-                        slot = slot,
-                        selected = keycaps[slot],
-                        onSelect = { selected ->
-                            val updated = keycaps.toMutableList()
-                            updated[slot] = selected
-                            onSettingsChange(settings.copy(codexKeycaps = updated))
-                            editingSlot = null
-                        },
-                        onBack = { editingSlot = null },
-                    )
-                } else {
-                    val layers = com.patchself.codexmacro.bluetooth.CustomKeyBinding.normalizeLayers(settings.customLayers)
-                    CustomKeyPicker(
-                        layer = activeLayer,
-                        slot = slot,
-                        selected = layers[activeLayer - 1][slot],
-                        onSave = { selected ->
-                            val updatedLayers = layers.map { it.toMutableList() }.toMutableList()
-                            updatedLayers[activeLayer - 1][slot] = selected
-                            onSettingsChange(settings.copy(customLayers = updatedLayers))
-                            editingSlot = null
-                        },
-                        onBack = { editingSlot = null },
-                    )
-                }
-            }
+            SettingsContent(
+                settings = settings,
+                onSettingsChange = onSettingsChange,
+                onDismiss = onDismiss,
+                onOpenLayerEditor = onOpenLayerEditor,
+            )
         }
     }
 }
@@ -93,7 +61,7 @@ internal fun SettingsContent(
     settings: ControllerSettings,
     onSettingsChange: (ControllerSettings) -> Unit,
     onDismiss: () -> Unit,
-    onEditSlot: (Int) -> Unit,
+    onOpenLayerEditor: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -130,7 +98,13 @@ internal fun SettingsContent(
             checked = settings.bluetoothDataLogging,
             onCheckedChange = { onSettingsChange(settings.copy(bluetoothDataLogging = it)) },
         )
-        LayerKeyLayout(settings, onSettingsChange, onEditSlot)
+        OutlinedButton(
+            onClick = onOpenLayerEditor,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Text(stringResource(R.string.action_customize_layers), fontWeight = FontWeight.Bold)
+        }
         Spacer(Modifier.padding(top = 2.dp))
         Button(
             onClick = onDismiss,
@@ -177,7 +151,7 @@ private fun ControllerSettingsPreview() {
             settings = ControllerSettings(stableConnection = true, activeLayer = 2),
             onSettingsChange = {},
             onDismiss = {},
-            onEditSlot = {},
+            onOpenLayerEditor = {},
         )
     }
 }

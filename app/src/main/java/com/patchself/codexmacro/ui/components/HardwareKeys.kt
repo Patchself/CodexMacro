@@ -11,14 +11,20 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,10 +36,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -113,17 +122,22 @@ fun CommandKey(
     showLabel: Boolean,
     glow: Color,
     modifier: Modifier = Modifier,
+    description: String? = null,
+    onClick: (() -> Unit)? = null,
     onKey: (String, Int, Int?) -> Unit,
 ) {
+    val label = localizedKeycapLabel(keycap)
     HardwareKey(
         symbol = if (keycap.iconRes() == null) keycap.glyph else null,
         iconRes = keycap.iconRes(),
-        description = localizedKeycapLabel(keycap),
+        description = description ?: label,
+        label = label,
         largeIcon = keycap == CommandKeycap.Mic,
         showLabel = showLabel,
         enabled = enabled,
         glow = glow,
         modifier = modifier,
+        onClick = onClick,
         onPress = { onKey(id, 1, null) },
         onRelease = { onKey(id, 0, null) },
     )
@@ -137,17 +151,22 @@ fun CustomKey(
     showLabel: Boolean,
     glow: Color,
     modifier: Modifier = Modifier,
+    description: String? = null,
+    onClick: (() -> Unit)? = null,
     onShortcut: (CustomKeyBinding, Boolean) -> Unit,
 ) {
+    val label = localizedShortcutLabel(binding)
     HardwareKey(
         symbol = if (binding.customIconUri == null && binding.keycap.iconRes() == null) binding.keycap.glyph else null,
         iconRes = if (binding.customIconUri == null) binding.keycap.iconRes() else null,
         customIconUri = binding.customIconUri,
-        description = localizedShortcutLabel(binding),
+        description = description ?: label,
+        label = label,
         showLabel = showLabel,
         enabled = enabled,
         glow = glow,
         modifier = modifier,
+        onClick = onClick,
         onPress = { onShortcut(binding, true) },
         onRelease = { onShortcut(binding, false) },
     )
@@ -224,44 +243,58 @@ private fun HardwareKey(
     @DrawableRes iconRes: Int? = null,
     customIconUri: String? = null,
     description: String,
+    label: String = description,
     largeIcon: Boolean = false,
     showLabel: Boolean,
     enabled: Boolean,
     glow: Color,
     modifier: Modifier,
+    onClick: (() -> Unit)? = null,
     onPress: () -> Unit,
     onRelease: () -> Unit,
 ) {
     var pressed by remember { mutableStateOf(false) }
+    val clickInteraction = remember { MutableInteractionSource() }
+    val clickedPressed by clickInteraction.collectIsPressedAsState()
+    val isPressed = pressed || clickedPressed
     val haptics = LocalHapticFeedback.current
-    val face = if (pressed) Color(0xFFE6E4DE) else Color(0xFFF9F8F4)
+    val face = if (isPressed) Color(0xFFE6E4DE) else Color(0xFFF9F8F4)
     val content = if (glow.luminance() > 0.65f) Color(0xFF33302B) else Color(0xFF242320)
     val visibleGlow = if (enabled) glow else Color.Transparent
+    val inputModifier = if (onClick == null) {
+        Modifier.pointerInput(enabled, description) {
+            if (!enabled) return@pointerInput
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                pressed = true
+                haptics.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+                onPress()
+                try {
+                    waitForUpOrCancellation()
+                } finally {
+                    pressed = false
+                    onRelease()
+                }
+            }
+        }
+    } else {
+        Modifier.clickable(
+            interactionSource = clickInteraction,
+            enabled = enabled,
+            onClick = onClick,
+        )
+    }
     Surface(
         modifier = modifier
             .alpha(if (enabled) 1f else 0.68f)
-            .shadow(if (!enabled) 0.dp else if (pressed) 2.dp else 7.dp, keyShape)
+            .shadow(if (!enabled) 0.dp else if (isPressed) 2.dp else 7.dp, keyShape)
             .border(1.dp, if (enabled) glow else Color(0xFFB8BFBB), keyShape)
             .semantics {
                 role = Role.Button
                 contentDescription = description
                 if (!enabled) disabled()
             }
-            .pointerInput(enabled, description) {
-                if (!enabled) return@pointerInput
-                awaitEachGesture {
-                    awaitFirstDown(requireUnconsumed = false)
-                    pressed = true
-                    haptics.performHapticFeedback(HapticFeedbackType.KeyboardTap)
-                    onPress()
-                    try {
-                        waitForUpOrCancellation()
-                    } finally {
-                        pressed = false
-                        onRelease()
-                    }
-                }
-            },
+            .then(inputModifier),
         shape = keyShape,
         color = face,
         contentColor = content,
@@ -270,6 +303,13 @@ private fun HardwareKey(
             Modifier.fillMaxSize().background(Brush.radialGradient(listOf(visibleGlow, Color.Transparent))),
             contentAlignment = Alignment.Center,
         ) {
+            Box(
+                Modifier
+                    .fillMaxHeight(0.66f)
+                    .aspectRatio(1f)
+                    .clip(CircleShape)
+                    .hardwareKeyFingerDivot(isPressed, enabled),
+            )
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 val customIcon = rememberUploadedIcon(customIconUri)
                 if (customIcon != null) {
@@ -292,10 +332,51 @@ private fun HardwareKey(
                     )
                 }
                 if (showLabel) {
-                    Text(description, fontSize = 8.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Text(label, fontSize = 8.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 }
             }
         }
+    }
+}
+
+private fun Modifier.hardwareKeyFingerDivot(pressed: Boolean, enabled: Boolean): Modifier = drawWithCache {
+    val darkAlpha = when {
+        !enabled -> 0.035f
+        pressed -> 0.12f
+        else -> 0.075f
+    }
+    val surfaceBrush = Brush.linearGradient(
+        colors = listOf(
+            Color.Black.copy(alpha = darkAlpha),
+            Color.Transparent,
+            Color.White.copy(alpha = if (pressed) 0.12f else 0.2f),
+        ),
+        start = androidx.compose.ui.geometry.Offset.Zero,
+        end = androidx.compose.ui.geometry.Offset(size.width, size.height),
+    )
+    val edgeBrush = Brush.linearGradient(
+        colors = listOf(
+            Color.Black.copy(alpha = darkAlpha * 0.7f),
+            Color.Transparent,
+            Color.White.copy(alpha = if (pressed) 0.08f else 0.14f),
+        ),
+        start = androidx.compose.ui.geometry.Offset.Zero,
+        end = androidx.compose.ui.geometry.Offset(size.width, size.height),
+    )
+    onDrawBehind {
+        val radius = size.minDimension / 2f
+        val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
+        drawCircle(
+            brush = surfaceBrush,
+            radius = radius,
+            center = center,
+        )
+        drawCircle(
+            brush = edgeBrush,
+            radius = radius - 0.75.dp.toPx(),
+            center = center,
+            style = Stroke(1.5.dp.toPx()),
+        )
     }
 }
 

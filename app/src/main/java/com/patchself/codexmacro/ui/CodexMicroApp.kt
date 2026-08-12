@@ -1,5 +1,6 @@
 package com.patchself.codexmacro.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
@@ -23,6 +24,7 @@ import com.patchself.codexmacro.bluetooth.ControllerSettings
 import com.patchself.codexmacro.bluetooth.CustomKeyBinding
 import com.patchself.codexmacro.protocol.ControllerState
 import com.patchself.codexmacro.ui.components.ControllerSettingsDialog
+import com.patchself.codexmacro.ui.components.LayerEditorScreen
 import com.patchself.codexmacro.ui.theme.CodexMacroTheme
 
 private val appBackground = Brush.verticalGradient(
@@ -44,6 +46,12 @@ fun CodexMicroApp(
     onCycleLayer: () -> Unit,
 ) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
+    var showLayerEditor by rememberSaveable { mutableStateOf(false) }
+    val closeLayerEditor = {
+        showLayerEditor = false
+        showSettings = true
+    }
+    BackHandler(enabled = showLayerEditor, onBack = closeLayerEditor)
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -52,27 +60,39 @@ fun CodexMicroApp(
             .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
     ) {
-        val callbacks = ControllerCallbacks(
-            onStart = onStart,
-            onStop = onStop,
-            onOpenBluetoothSettings = onOpenBluetoothSettings,
-            onOpenSettings = { showSettings = true },
-            onKey = onKey,
-            onShortcut = onShortcut,
-            onJoystick = onJoystick,
-            onCycleLayer = onCycleLayer,
-        )
-        if (maxWidth > maxHeight) {
-            LandscapeController(state, settings, callbacks)
-        } else {
-            PortraitController(state, settings, callbacks)
-        }
-        if (showSettings) {
-            ControllerSettingsDialog(
+        if (showLayerEditor) {
+            LayerEditorScreen(
                 settings = settings,
                 onSettingsChange = onSettingsChange,
-                onDismiss = { showSettings = false },
+                onBack = closeLayerEditor,
             )
+        } else {
+            val callbacks = ControllerCallbacks(
+                onStart = onStart,
+                onStop = onStop,
+                onOpenBluetoothSettings = onOpenBluetoothSettings,
+                onOpenSettings = { showSettings = true },
+                onKey = onKey,
+                onShortcut = onShortcut,
+                onJoystick = onJoystick,
+                onCycleLayer = onCycleLayer,
+            )
+            if (maxWidth > maxHeight) {
+                LandscapeController(state, settings, callbacks)
+            } else {
+                PortraitController(state, settings, callbacks)
+            }
+            if (showSettings) {
+                ControllerSettingsDialog(
+                    settings = settings,
+                    onSettingsChange = onSettingsChange,
+                    onOpenLayerEditor = {
+                        showSettings = false
+                        showLayerEditor = true
+                    },
+                    onDismiss = { showSettings = false },
+                )
+            }
         }
     }
 }
